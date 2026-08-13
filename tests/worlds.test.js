@@ -363,6 +363,60 @@ test('the cyberpunk scenario plays to an ending from many seeds', () => {
   }
 });
 
+test('every cyberpunk scenario reaches an ending from many seeds', () => {
+  const neonScenarios = BUILT_IN.filter(s => s.world === 'neon');
+  assert.ok(neonScenarios.length >= 4, `ネオンのシナリオが少ない: ${neonScenarios.length}`);
+
+  for (const scenario of neonScenarios) {
+    for (let seed = 0; seed < 6; seed++) {
+      useWorld('neon');
+      const picker = new Rng(seed * 331 + 17);
+      const session = new Session({ scenario, party: pregeneratedParty(), seed });
+      session.start();
+      let guard = 0;
+      while (!session.finished && guard++ < 800) {
+        if (session.combat) {
+          const view = session.view();
+          const option = view.combat.options.find(o => o.kind === 'attack') || view.combat.options[0];
+          if (!option) break;
+          session.act({ ...option, targetUid: view.combat.targets[0]?.uid });
+        } else if (session.netrun) {
+          session.hack({ id: picker.pick(APPROACHES).id });
+        } else {
+          const choices = session.availableChoices().filter(c => !c.locked);
+          assert.ok(choices.length,
+            `${scenario.id} seed ${seed}: "${session.nodeId}" で進めなくなった`);
+          session.choose(picker.pick(choices).index);
+        }
+      }
+      assert.equal(session.finished, true,
+        `${scenario.id} seed ${seed}: 結末に届かなかった（${session.nodeId}）`);
+    }
+  }
+});
+
+test('the cyberpunk line-up covers more than one kind of story', () => {
+  const neon = BUILT_IN.filter(s => s.world === 'neon').map(s => describeShape(s));
+  // 導入・侵入もの・戦闘の多い話が、それぞれ最低ひとつはあること。
+  assert.ok(neon.some(s => s.tutorial), '導入編がない');
+  assert.ok(neon.some(s => s.netruns >= 1), 'ネットランを使う話がない');
+  assert.ok(neon.some(s => s.combats >= 4), '戦闘中心の話がない');
+  assert.ok(neon.some(s => s.checks >= 15 && s.combats <= 2), '判定中心の話がない');
+  assert.ok(neon.every(s => s.endings >= 3), `結末が3つ未満の話がある`);
+});
+
+const describeShape = scenario => {
+  const nodes = Object.values(scenario.nodes);
+  return {
+    id: scenario.id,
+    tutorial: !!scenario.tutorial,
+    netruns: nodes.filter(n => n.netrun).length,
+    combats: nodes.filter(n => n.combat).length,
+    endings: nodes.filter(n => n.ending).length,
+    checks: nodes.reduce((s, n) => s + (n.choices || []).filter(c => c.check).length, 0),
+  };
+};
+
 test('a save records its world and restores into it', () => {
   useWorld('neon');
   const session = new Session({ scenario: byId('rain-check'), party: pregeneratedParty(), seed: 3 });

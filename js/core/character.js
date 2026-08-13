@@ -61,6 +61,7 @@ export function createCharacter(draft = {}) {
   const character = {
     id: draft.id || `pc_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
     name: draft.name?.trim() || '名もなき冒険者',
+    world: activeWorld().id,
     ancestryId: ancestry.id,
     classId: klass.id,
     backgroundId: background.id,
@@ -391,6 +392,7 @@ const DEFAULT_NAMES = ['ヴェル', 'キド', 'サーシャ', 'マオ'];
 /** Restore a character loaded from JSON: fills in anything a new build added. */
 export function reviveCharacter(data) {
   const character = { conditions: [], inventory: [], spells: [], cantrips: [], augments: [], resources: {}, ...data };
+  character.world = character.world || activeWorld().id;
   character.abilities = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(data.abilities || {}) };
   character.level = Math.max(1, Math.min(10, character.level || 1));
   recalculate(character);

@@ -3,10 +3,13 @@
 import { firstJob } from './first-job.js';
 import { silentBell } from './silent-bell.js';
 import { rainCheck } from './rain-check.js';
+import { firstRun } from './first-run.js';
+import { blackout } from './blackout.js';
+import { lastRide } from './last-ride.js';
 import { describe } from '../core/scenario.js';
 import { worldById, DEFAULT_WORLD } from '../worlds/index.js';
 
-export const BUILT_IN = [firstJob, silentBell, rainCheck];
+export const BUILT_IN = [firstJob, silentBell, firstRun, rainCheck, blackout, lastRide];
 
 export const byId = id => BUILT_IN.find(s => s.id === id) || null;
 

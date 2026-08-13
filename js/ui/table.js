@@ -13,6 +13,7 @@ import { spawnMonster, spawnGroup } from '../core/combat.js';
 import { MONSTERS, monsterById } from '../core/content.js';
 import { listCharacters, putCharacter, getPrefs, setPref } from '../core/store.js';
 import { openBuilder, randomCharacter, openSaved } from './builder.js';
+import { WORLDS, useWorld, activeWorld, DEFAULT_WORLD } from '../worlds/index.js';
 
 const QUICK_DICE = ['1d20', '1d4', '1d6', '1d8', '1d10', '1d12', '1d100'];
 
@@ -25,15 +26,39 @@ export class TableScreen {
     this.history = [];
     this.expression = '1d20';
     this.mode = null;                       // 'adv' | 'dis' | null
-    this.characters = listCharacters().map(reviveCharacter);
+    // The tool is a table, not a campaign: pick the setting explicitly rather
+    // than inheriting whatever scenario was played last.
+    this.world = getPrefs().tableWorld || DEFAULT_WORLD;
+    useWorld(this.world);
+    this.allCharacters = listCharacters().map(reviveCharacter);
     this.tracker = [];                      // {name, init, hp, maxHp, ac, isPc, ref}
     this.round = 1;
     this.turn = 0;
     this.render();
   }
 
+  /** Only the characters that belong to the world currently on the table. */
+  get characters() {
+    return this.allCharacters.filter(c => (c.world || DEFAULT_WORLD) === this.world);
+  }
+
+  switchWorld(id) {
+    if (id === this.world) return;
+    this.world = id;
+    setPref('tableWorld', id);
+    useWorld(id);
+    // Anyone from the other setting stays saved, just off this table.
+    this.tracker = this.tracker.filter(row => !row.isPc);
+    this.render();
+    toast(`${activeWorld().name} に切り替えました`);
+  }
+
   render() {
     clear(this.root).append(el('div', { class: 'stack' }, [
+      el('div', { class: 'chips' }, WORLDS.map(world => el('button', {
+        class: `chip ${this.world === world.id ? 'is-on' : ''}`,
+        onclick: () => this.switchWorld(world.id),
+      }, [`${world.icon} ${world.name}`]))),
       el('div', { class: 'chips' }, [
         ['dice', '🎲 ダイス'], ['chars', '📜 キャラクター'], ['init', '⚔️ 進行'],
       ].map(([id, label]) => el('button', {
@@ -151,7 +176,7 @@ export class TableScreen {
   charsTab() {
     return el('div', { class: 'stack' }, [
       el('div', { class: 'card stack' }, [
-        el('h3', { class: 'card__title', text: 'この卓のキャラクター' }),
+        el('h3', { class: 'card__title', text: `この卓のキャラクター（${activeWorld().name}）` }),
         el('div', { class: 'row' }, [
           button('新しく作る', () => openBuilder(c => this.addCharacter(c)), 'btn grow'),
           button('ランダム', () => this.addCharacter(randomCharacter(this.rng)), 'btn grow'),
@@ -183,7 +208,7 @@ export class TableScreen {
             }, ['進行に追加']),
           ]),
         ])))
-        : el('p', { class: 'muted center tiny', text: 'まだ誰もいない。' }),
+        : el('p', { class: 'muted center tiny', text: `${activeWorld().name} のキャラクターはまだいない。` }),
 
       this.characters.length ? el('div', { class: 'card row' }, [
         button('全員 長休憩', () => { restParty(this.characters); toast('全員が回復した'); this.render(); }, 'btn grow'),
@@ -192,7 +217,7 @@ export class TableScreen {
   }
 
   addCharacter(character) {
-    this.characters.push(character);
+    this.allCharacters.push(character);
     putCharacter(character);
     this.render();
   }

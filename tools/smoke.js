@@ -220,15 +220,21 @@ try {
   });
 
   await step('サイバーパンク：ネットランに入って追跡ゲージが動く', async () => {
-    /* 街はわざと巡回できる作りなので、素直に先頭を押し続けると永久に回る。
-       目的地に近い選択肢を優先し、無ければ押す位置をずらして進む。 */
-    const WANTED = ['ネットラン', 'タワーへ向かう', '情報屋', 'チップ', '解析'];
-    let rotation = 0;
+    /* 導入編は必ず侵入を通る作りなので、ここで確実に検証する。
+       本編は経路が枝分かれしていて、判定次第で侵入までたどり着かない。 */
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.getByRole('button', { name: /初日の運び屋/ }).first().click();
+    await page.waitForSelector('text=おまかせ4人');
+    await click('おまかせ4人');
+    await click('この一行で始める');
+    await page.waitForSelector('.line-narration');
 
-    for (let i = 0; i < 40; i++) {
+    const WANTED = ['扉の記録を読む', 'エレベーターの制御', '配達員として', '受け取って走り出す'];
+    let rotation = 0;
+    for (let i = 0; i < 30; i++) {
       if (await page.locator('.netrun').count()) break;
 
-      // 戦闘に入ったら片付けてから続ける。
       if (await page.locator('.combat:not(.netrun)').count()) {
         const action = page.locator('.action:not([disabled])').first();
         if (await action.count()) { await action.click(); await page.waitForTimeout(120); await resolveSheet(); }
@@ -252,10 +258,51 @@ try {
     }
 
     if (!await page.locator('.netrun').count()) throw new Error('ネットランに入れなかった');
+    const trace = await page.locator('.trace__bar').count();
+    if (!trace) throw new Error('追跡ゲージが出ていない');
     await page.locator('.action--netrun').first().click();
     await page.waitForTimeout(300);
     const log = await page.locator('.log').innerText();
     if (!/追跡|突破|第\d層/.test(log)) throw new Error('侵入のログが出ていない');
+  });
+
+  await step('セッション支援：世界観を切り替えられる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await click('ネオンの雨');
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    const sheet = await page.locator('dialog[open] .sheet__body').innerText();
+    if (!/適合度/.test(sheet)) throw new Error('サイバーパンクのシートに改造欄が出ていない');
+    await page.locator('#sheetClose').click();
+    await page.waitForTimeout(150);
+    // 世界を戻すと、その世界のキャラだけが残る。
+    await click('灯火のテーブル');
+    await page.waitForTimeout(200);
+    const back = await page.locator('#screen').innerText();
+    if (!/灯火のテーブル/.test(back)) throw new Error('世界が戻っていない');
+  });
+
+  await step('サイバーパンクのシナリオが4本以上ある', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.waitForSelector('text=ネオンの雨');
+    const titles = await page.locator('.tile__name').allTextContents();
+    const neon = ['初日の運び屋', '雨の領収書', '三分間の停電', '最終便'];
+    const missing = neon.filter(t => !titles.some(x => x.includes(t)));
+    if (missing.length) throw new Error(`並んでいない: ${missing.join(', ')}`);
+  });
+
+  await step('追加シナリオが開始できる', async () => {
+    await page.getByRole('button', { name: /三分間の停電/ }).first().click();
+    await page.waitForSelector('text=おまかせ4人');
+    await click('おまかせ4人');
+    await click('この一行で始める');
+    await page.waitForSelector('.line-narration');
+    const log = await page.locator('.log').innerText();
+    if (!/アズマ信託/.test(log)) throw new Error('本文が出ていない');
   });
 
   await step('サイバーパンク：改造で適合度が動く', async () => {
