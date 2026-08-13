@@ -369,6 +369,15 @@ try {
     await page.locator('#sheetClose').click();
   });
 
+  await step('読み物の **強調** が素通しになっていない', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('世界');
+    await page.getByRole('button', { name: /ネオンの雨/ }).first().click();
+    await page.getByText('会社は、返さなかっただけだ').waitFor();
+    const raw = await page.locator('.stack').first().innerText();
+    if (raw.includes('**')) throw new Error('本文にアスタリスクがそのまま出ている');
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

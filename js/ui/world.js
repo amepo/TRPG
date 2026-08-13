@@ -46,6 +46,14 @@ export function lorePanel({ withHeader = false } = {}) {
 
 /* ---------------------------------------------------------------- 部品 */
 
+/* 本文の段落。読み物側でも **強調** を効かせる——primer だけ効いて
+   決まりごとや勢力で素通しになっていると、書くほうが使い分けを覚えられない。 */
+const body = (text, cls = 'tiny muted') => {
+  const p = el('div', { class: cls, style: { lineHeight: '1.7' } });
+  p.append(richText(text));
+  return p;
+};
+
 const worldPicker = draw => el('div', { class: 'card card--flat' }, [
   el('div', { class: 'chips' }, WORLDS.map(world => el('button', {
     class: `chip ${activeWorld().id === world.id ? 'is-on' : ''}`,
@@ -75,7 +83,7 @@ const listCard = (title, items, shape) => (items.length ? el('div', { class: 'ca
     const [name, blurb] = shape(item);
     return el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
       el('div', { style: { fontWeight: '600' }, text: name }),
-      el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: blurb }),
+      body(blurb),
     ]);
   }),
 ]) : null);
@@ -85,7 +93,7 @@ const truthsCard = () => (LORE.truths.length ? el('div', { class: 'card stack' }
   el('h3', { class: 'card__title', text: '世界の決まりごと' }),
   ...LORE.truths.map(t => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
     el('div', { style: { fontWeight: '600' }, text: t.title }),
-    el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: t.text }),
+    body(t.text),
   ])),
 ]) : null);
 
@@ -116,7 +124,7 @@ function districtsCard() {
         el('span', { style: { fontWeight: '600' }, text: d.name }),
         el('span', { class: 'tiny faint', text: `物価 ×${d.priceScale}` }),
       ]),
-      el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: d.blurb }),
+      body(d.blurb),
       el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `空気：${d.air}　／　縄張り：${d.turf}` }),
       el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `▸ ${d.entry}` }),
     ])),
@@ -141,7 +149,7 @@ const timelineCard = () => (LORE.timeline.length ? el('div', { class: 'card stac
   el('h3', { class: 'card__title', text: 'ここまでの経緯' }),
   ...LORE.timeline.map(t => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
     el('div', { class: 'tiny', style: { fontWeight: '600', color: 'var(--gold)' }, text: t.when }),
-    el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: t.what }),
+    body(t.what),
   ])),
 ]) : null);
 
@@ -150,8 +158,8 @@ const factionsCard = () => (LORE.factions.length ? el('div', { class: 'card stac
   el('h3', { class: 'card__title', text: '勢力' }),
   ...LORE.factions.map(f => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '12px' } }, [
     el('div', { style: { fontWeight: '600' }, text: f.name }),
-    el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: f.blurb }),
-    f.stance ? el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `▸ ${f.stance}` }) : null,
+    body(f.blurb),
+    f.stance ? body(`▸ ${f.stance}`, 'tiny faint') : null,
   ])),
 ]) : null);
 
