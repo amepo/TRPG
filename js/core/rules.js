@@ -194,7 +194,10 @@ export function savingThrow(actor, ability, dc, opts = {}) {
 export function attackRoll(attacker, target, attack, opts = {}) {
   const { rng, advantage = false, disadvantage = false } = opts;
   const adv = advantage || GRANTS_ADVANTAGE.some(id => hasCondition(target, id));
-  const dis = disadvantage || SELF_DISADVANTAGE.some(id => hasCondition(attacker, id));
+  // 重火器は反動を支える体格が要る。足りなければ狙いが逸れる。
+  const tooLight = !!attack.heavy && (attacker.abilities?.str ?? 10) < 13;
+  const dis = disadvantage || tooLight
+    || SELF_DISADVANTAGE.some(id => hasCondition(attacker, id));
   const mode = resolveMode({ advantage: adv, disadvantage: dis });
 
   let mod = attackBonus(attacker, attack);

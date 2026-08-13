@@ -187,7 +187,7 @@ const ARMORS = {
   hide: { id: 'hide', name: 'ハイドアーマー', base: 12, maxDex: 2, stealth: 0 },
   chain: { id: 'chain', name: 'チェインシャツ', base: 13, maxDex: 2, stealth: 0 },
   breastplate: { id: 'breastplate', name: 'ブレストプレート', base: 14, maxDex: 2, stealth: 0 },
-  plate: { id: 'plate', name: 'プレートアーマー', base: 16, maxDex: 0, stealth: -2 },
+  plate: { id: 'plate', name: 'プレートアーマー', base: 18, maxDex: 0, stealth: -2 },
 };
 
 const SHIELD = { id: 'shield', name: 'シールド', ac: 2 };

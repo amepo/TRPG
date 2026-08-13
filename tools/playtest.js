@@ -361,6 +361,9 @@ if (target && !scenarios.length) {
 }
 
 console.log(`プレイテスト — ${scenarios.length}本 × ${runs}回 × 2ボット`);
+if (runs < 50) {
+  console.log('  ※ 試行が少ないと稀な結末を拾えず「到達しない」と誤検知します（--runs=80 以上を推奨）');
+}
 
 let errors = 0;
 for (const scenario of scenarios) {

@@ -1,15 +1,18 @@
-/* Scenarios shipped with the app, plus whatever the player has saved locally. */
+/* Scenarios shipped with the app, plus whatever the player has saved locally.
+
+   このファイルは tools/sync.js が生成します。手で編集しないでください。
+   シナリオを足すときは js/scenarios/ に置いて `npm run sync` を実行します。 */
 
 import { firstJob } from './first-job.js';
 import { silentBell } from './silent-bell.js';
-import { rainCheck } from './rain-check.js';
 import { firstRun } from './first-run.js';
 import { blackout } from './blackout.js';
 import { lastRide } from './last-ride.js';
+import { rainCheck } from './rain-check.js';
 import { describe } from '../core/scenario.js';
 import { worldById, DEFAULT_WORLD } from '../worlds/index.js';
 
-export const BUILT_IN = [firstJob, silentBell, firstRun, rainCheck, blackout, lastRide];
+export const BUILT_IN = [firstJob, silentBell, firstRun, blackout, lastRide, rainCheck];
 
 export const byId = id => BUILT_IN.find(s => s.id === id) || null;
 

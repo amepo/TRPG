@@ -208,6 +208,7 @@ export function attackOptions(character) {
     out.push({
       id: slot, name: weapon.name, damage: weapon.damage, type: weapon.type,
       ability: weapon.ability, magic: weapon.magic || 0, ranged: !!weapon.ranged,
+      heavy: !!weapon.heavy, tags: weapon.tags || [],
       kind: 'weapon',
     });
   };

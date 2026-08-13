@@ -64,7 +64,7 @@ test('armour class combines armour, dex cap and shield', () => {
   assert.equal(armorClass(heavy), 17);                       // 13 + min(dex 2, cap 2) + 2
 
   const capped = dummy({ abilities: { ...dummy().abilities, dex: 20 }, equipped: { armor: { ...ARMORS.plate } } });
-  assert.equal(armorClass(capped), 16);                      // dex is ignored entirely
+  assert.equal(armorClass(capped), 18);                      // SRD のプレート。dex は一切乗らない
 });
 
 test('a check succeeds when the total meets the DC', () => {

@@ -176,12 +176,15 @@ const BACKGROUNDS = [
 const WEAPONS = {
   pistol: { id: 'pistol', name: 'ハンドガン', damage: '1d8', type: '実弾', ability: 'dex', tags: ['遠隔'], ranged: true },
   smg: { id: 'smg', name: 'サブマシンガン', damage: '1d6', type: '実弾', ability: 'dex', tags: ['遠隔', '連射'], ranged: true },
-  rifle: { id: 'rifle', name: 'アサルトライフル', damage: '1d10', type: '実弾', ability: 'dex', tags: ['遠隔', '両手'], ranged: true },
-  shotgun: { id: 'shotgun', name: 'ショットガン', damage: '1d12', type: '実弾', ability: 'dex', tags: ['遠隔', '両手'], ranged: true },
+  /* 遠隔は反撃を受けないぶん有利なので、ダメージの上限は 1d10 に抑える
+     （SRD が重クロスボウ 1d10、近接に 1d12 を割り当てているのと同じ理由）。
+     重火器は反動を支える体格を要求し、体力が足りないと命中に不利がつく。 */
+  rifle: { id: 'rifle', name: 'アサルトライフル', damage: '1d10', type: '実弾', ability: 'dex', tags: ['遠隔', '両手', '重火器'], ranged: true, heavy: true },
+  shotgun: { id: 'shotgun', name: 'ショットガン', damage: '1d10', type: '実弾', ability: 'dex', tags: ['遠隔', '両手', '重火器'], ranged: true, heavy: true },
   taser: { id: 'taser', name: 'テイザー', damage: '1d4', type: '電撃', ability: 'dex', tags: ['遠隔'], ranged: true },
   monoblade: { id: 'monoblade', name: 'モノフィラ・ブレード', damage: '1d8', type: '斬撃', ability: 'dex', tags: ['近接'] },
   katana: { id: 'katana', name: 'カタナ', damage: '1d8', type: '斬撃', ability: 'dex', tags: ['近接'] },
-  knuckles: { id: 'knuckles', name: '強化ナックル', damage: '1d6', type: '打撃', ability: 'str', tags: ['近接'] },
+  knuckles: { id: 'knuckles', name: '強化ナックル', damage: '1d8', type: '打撃', ability: 'str', tags: ['近接'] },
   stunbaton: { id: 'stunbaton', name: 'スタンバトン', damage: '1d6', type: '電撃', ability: 'str', tags: ['近接'] },
   cleaver: { id: 'cleaver', name: '工業用クリーバー', damage: '1d12', type: '斬撃', ability: 'str', tags: ['近接', '両手'] },
   unarmed: { id: 'unarmed', name: '素手', damage: '1d2', type: '打撃', ability: 'str', tags: ['近接'] },
@@ -381,7 +384,7 @@ const ENEMIES = {
     blurb: '規格品の装甲。規格品の動き。だから強い。',
   },
   cleaner: {
-    id: 'cleaner', name: '掃除屋', kind: '人型', cr: 2, xp: 450,
+    id: 'cleaner', name: '掃除屋', kind: '人型', cr: 3, xp: 700,
     acOverride: 15, hp: '8d8+8', hpAvg: 44, speed: 12,
     abilities: { str: 12, dex: 18, con: 13, int: 14, wis: 14, cha: 11 },
     attacks: [
@@ -435,7 +438,7 @@ const ENEMIES = {
   },
   juggernaut: {
     id: 'juggernaut', name: 'ジャガーノート', kind: '重装', cr: 2, xp: 450,
-    acOverride: 17, hp: '7d10+21', hpAvg: 59, speed: 9,
+    acOverride: 15, hp: '7d10+21', hpAvg: 59, speed: 9,
     abilities: { str: 19, dex: 8, con: 17, int: 6, wis: 8, cha: 7 },
     attacks: [{ name: '装甲拳', bonus: 6, damage: '2d8+4', type: '打撃' }],
     resistances: ['実弾', '斬撃'],
@@ -451,7 +454,7 @@ const ENEMIES = {
     blurb: '壁ではない。こちらを見ている。',
   },
   blackIce: {
-    id: 'blackIce', name: 'ブラックICE', kind: '電子', cr: 2, xp: 450,
+    id: 'blackIce', name: 'ブラックICE', kind: '電子', cr: 3, xp: 700,
     acOverride: 16, hp: '7d8+14', hpAvg: 45, speed: 0,
     abilities: { str: 1, dex: 16, con: 15, int: 18, wis: 14, cha: 6 },
     attacks: [
