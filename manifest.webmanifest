@@ -1,0 +1,41 @@
+{
+  "id": "./",
+  "name": "灯火のテーブル — ブラウザで遊ぶ TRPG",
+  "short_name": "灯火のテーブル",
+  "description": "d20 系ルールの TRPG。ソロプレイ、セッション支援、シナリオ工房。通信なし・完全オフラインで動きます。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#141019",
+  "theme_color": "#141019",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "ソロプレイ",
+      "short_name": "ソロ",
+      "url": "./index.html#scenarios",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "セッション支援（ダイス）",
+      "short_name": "ダイス",
+      "url": "./index.html#table",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "シナリオ工房",
+      "short_name": "工房",
+      "url": "./index.html#editor",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

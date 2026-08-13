@@ -1,0 +1,336 @@
+/* Character creation, derived stats and progression.
+
+   A character is a plain serialisable object. Anything computed from it
+   (AC, attack list, spell slots) is derived on demand rather than stored, so
+   a save file from an older build still works after the rules change. */
+
+import { roll } from './dice.js';
+import { Rng } from './rng.js';
+import {
+  ABILITY_IDS, abilityMod, proficiencyBonus, armorClass, skillMod, saveMod,
+  SKILLS, passive, longRest, levelForXp,
+} from './rules.js';
+import {
+  ANCESTRIES, CLASSES, BACKGROUNDS, WEAPONS, ARMORS, SHIELD, ITEMS,
+  ancestryById, classById, backgroundById, spellSlots, sneakAttackDice,
+  CLASS_SPELLS, spellById,
+} from './content.js';
+
+export const POINT_BUY_BUDGET = 27;
+const POINT_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+
+export const pointCost = score => POINT_COST[score] ?? Infinity;
+export const pointsSpent = abilities =>
+  ABILITY_IDS.reduce((sum, id) => sum + (POINT_COST[abilities[id]] ?? 0), 0);
+
+/** The standard spread, before ancestry bonuses. */
+export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+
+/** Roll 4d6, drop the lowest, six times. */
+export function rollAbilities(rng = new Rng()) {
+  return Array.from({ length: 6 }, () => roll('4d6kh3', { rng }).total)
+    .sort((a, b) => b - a);
+}
+
+/* --------------------------------------------------------------- creation */
+
+/**
+ * Build a complete character from a draft.
+ * @param {object} draft {name, ancestryId, classId, backgroundId, abilities,
+ *                        skills, expertise, spells, portrait, notes}
+ */
+export function createCharacter(draft = {}) {
+  const ancestry = ancestryById(draft.ancestryId);
+  const klass = classById(draft.classId);
+  const background = backgroundById(draft.backgroundId);
+  const level = Math.max(1, Math.min(10, draft.level || 1));
+
+  const base = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(draft.abilities || {}) };
+  const abilities = {};
+  for (const id of ABILITY_IDS) abilities[id] = (base[id] || 10) + (ancestry.bonus?.[id] || 0);
+
+  // Background skills are free; class picks come from the draft.
+  const skills = [...new Set([
+    ...(background.skills || []),
+    ...(ancestry.grantSkills || []),
+    ...(draft.skills || []),
+  ])];
+
+  const character = {
+    id: draft.id || `pc_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    name: draft.name?.trim() || '名もなき冒険者',
+    ancestryId: ancestry.id,
+    classId: klass.id,
+    backgroundId: background.id,
+    level,
+    xp: draft.xp || 0,
+    abilities,
+    skills,
+    expertise: (draft.expertise || []).slice(0, klass.expertiseChoices || 0),
+    saves: [...klass.saves],
+    speed: ancestry.speed,
+    hitDie: klass.hitDie,
+    conditions: [],
+    tempHp: 0,
+    deathSaves: { success: 0, fail: 0 },
+    inventory: [],
+    equipped: {},
+    spells: [...(draft.spells || [])],
+    cantrips: [...(klass.caster?.cantrips || [])],
+    slots: {},
+    resources: {},
+    resistances: [...(ancestry.resistances || [])],
+    notes: draft.notes || '',
+    portrait: draft.portrait || pickPortrait(klass.id),
+    createdAt: Date.now(),
+  };
+
+  equipStartingGear(character, klass, background);
+  recalculate(character);
+  character.hp = character.maxHp;
+  character.hitDice = level;
+  return character;
+}
+
+const PORTRAITS = { fighter: '🛡️', rogue: '🗡️', mage: '🔮', cleric: '✨', ranger: '🏹' };
+const pickPortrait = classId => PORTRAITS[classId] || '🎲';
+
+function equipStartingGear(character, klass, background) {
+  if (klass.armor && ARMORS[klass.armor]) character.equipped.armor = { ...ARMORS[klass.armor] };
+  if (klass.offhand === 'shield') character.equipped.shield = { ...SHIELD };
+  if (klass.weapon && WEAPONS[klass.weapon]) character.equipped.weapon = { ...WEAPONS[klass.weapon] };
+  if (klass.ranged && WEAPONS[klass.ranged]) character.equipped.ranged = { ...WEAPONS[klass.ranged] };
+
+  addItem(character, ITEMS.potion, 2);
+  addItem(character, ITEMS.rations, 1);
+  addItem(character, ITEMS.torch, 3);
+  if (klass.id === 'rogue') addItem(character, ITEMS.lockpicks, 1);
+  if (klass.id === 'cleric') addItem(character, ITEMS.holySymbol, 1);
+  if (klass.id === 'mage') addItem(character, ITEMS.spellbook, 1);
+  for (const name of background.gear || []) addItem(character, { id: `bg_${name}`, name, desc: '経歴の持ち物' }, 1);
+  character.gold = 25;
+}
+
+/* -------------------------------------------------------------- derived */
+
+/** Recompute everything that depends on level, ability scores and gear. */
+export function recalculate(character) {
+  const klass = classById(character.classId);
+  const ancestry = ancestryById(character.ancestryId);
+  const conMod = abilityMod(character.abilities.con);
+
+  // Level 1 takes the full hit die; later levels take its average, rounded up.
+  const perLevel = Math.ceil((Number(klass.hitDie.split('d')[1]) + 1) / 2);
+  character.maxHp = klass.hpBase + conMod
+    + (character.level - 1) * (perLevel + conMod)
+    + (ancestry.hpPerLevel || 0) * character.level;
+  character.maxHp = Math.max(1, character.maxHp);
+  if (character.hp === undefined) character.hp = character.maxHp;
+  character.hp = Math.min(character.hp, character.maxHp);
+
+  character.proficiency = proficiencyBonus(character.level);
+  character.ac = armorClass(character);
+  character.initiative = abilityMod(character.abilities.dex);
+  character.features = klass.features.filter(f => f.level <= character.level);
+  character.hitDie = klass.hitDie;
+
+  if (klass.caster) {
+    character.slots = mergeSlots(character.slots, spellSlots(character.level, !!klass.caster.halfCaster));
+    character.spellAbility = klass.caster.ability;
+    character.spellDC = 8 + character.proficiency + abilityMod(character.abilities[klass.caster.ability]);
+    character.spellAttack = character.proficiency + abilityMod(character.abilities[klass.caster.ability]);
+  }
+  // Per-rest features, tracked as spendable resources.
+  character.resources = character.resources || {};
+  for (const feature of character.features) {
+    if (['secondWind', 'channelHeal', 'surge', 'arcaneRecovery'].includes(feature.id)) {
+      character.resources[feature.id] = character.resources[feature.id] ?? { max: 1, used: 0 };
+    }
+  }
+  return character;
+}
+
+/** Keep how many slots are already spent when the table grows. */
+function mergeSlots(current = {}, table) {
+  const out = {};
+  for (const [level, max] of Object.entries(table)) {
+    out[level] = { max, used: Math.min(current[level]?.used || 0, max) };
+  }
+  return out;
+}
+
+/** Every attack the character can make right now. */
+export function attackOptions(character) {
+  const out = [];
+  const push = (weapon, slot) => {
+    if (!weapon) return;
+    out.push({
+      id: slot, name: weapon.name, damage: weapon.damage, type: weapon.type,
+      ability: weapon.ability, magic: weapon.magic || 0, ranged: !!weapon.ranged,
+      kind: 'weapon',
+    });
+  };
+  push(character.equipped?.weapon, 'weapon');
+  push(character.equipped?.ranged, 'ranged');
+  if (!out.length) push({ ...WEAPONS.unarmed }, 'unarmed');
+  return out;
+}
+
+/** Cantrips plus any prepared spell with a slot left. */
+export function spellOptions(character) {
+  const out = [];
+  for (const id of character.cantrips || []) {
+    const spell = spellById(id);
+    if (spell) out.push({ ...spell, slotLevel: 0, available: true });
+  }
+  for (const id of character.spells || []) {
+    const spell = spellById(id);
+    if (!spell) continue;
+    const slot = character.slots?.[spell.level];
+    out.push({ ...spell, slotLevel: spell.level, available: !!slot && slot.used < slot.max });
+  }
+  return out;
+}
+
+/** Spend a slot; returns false when none are left. */
+export function useSlot(character, level) {
+  if (!level) return true;                              // cantrips are free
+  const slot = character.slots?.[level];
+  if (!slot || slot.used >= slot.max) return false;
+  slot.used += 1;
+  return true;
+}
+
+export function slotsLeft(character, level) {
+  const slot = character.slots?.[level];
+  return slot ? slot.max - slot.used : 0;
+}
+
+/* ------------------------------------------------------------- inventory */
+
+export function addItem(character, item, count = 1) {
+  character.inventory = character.inventory || [];
+  const existing = character.inventory.find(i => i.id === item.id);
+  if (existing) existing.count += count;
+  else character.inventory.push({ ...item, count });
+  return character.inventory;
+}
+
+export function removeItem(character, itemId, count = 1) {
+  const entry = character.inventory?.find(i => i.id === itemId);
+  if (!entry) return false;
+  entry.count -= count;
+  if (entry.count <= 0) character.inventory = character.inventory.filter(i => i.id !== itemId);
+  return true;
+}
+
+export const hasItem = (character, itemId) =>
+  !!character.inventory?.some(i => i.id === itemId && i.count > 0);
+
+/* ------------------------------------------------------------ progression */
+
+/** Award XP and report whether it crossed a level boundary. */
+export function awardXp(character, amount) {
+  const before = character.level;
+  character.xp = (character.xp || 0) + amount;
+  const after = levelForXp(character.xp);
+  if (after > before) return { gained: amount, levelUp: true, from: before, to: after };
+  return { gained: amount, levelUp: false };
+}
+
+/** Apply a level-up. Ability bumps come at 4, 6 and 8. */
+export function levelUp(character, { abilityBumps = [] } = {}) {
+  if (character.level >= 10) return { ok: false, reason: '最大レベルです' };
+  character.level += 1;
+  const gained = [];
+
+  if ([4, 6, 8].includes(character.level)) {
+    for (const id of abilityBumps.slice(0, 2)) {
+      if (character.abilities[id] < 20) { character.abilities[id] += 1; gained.push(`${id} +1`); }
+    }
+  }
+  const klass = classById(character.classId);
+  const fresh = klass.features.filter(f => f.level === character.level);
+  gained.push(...fresh.map(f => f.name));
+
+  const beforeMax = character.maxHp;
+  recalculate(character);
+  character.hp += character.maxHp - beforeMax;
+  character.hitDice = character.level;
+
+  // Casters learn one new spell each level.
+  const learnable = (CLASS_SPELLS[klass.id] || []).filter(id => !character.spells.includes(id));
+  const affordable = learnable.filter(id => (spellById(id)?.level || 1) <= Math.ceil(character.level / 2));
+  if (klass.caster && affordable.length) {
+    character.spells.push(affordable[0]);
+    gained.push(`呪文《${spellById(affordable[0]).name}》`);
+  }
+  return { ok: true, level: character.level, gained, features: fresh };
+}
+
+/* ------------------------------------------------------------ presentation */
+
+/** Everything the sheet UI needs, in one call. */
+export function sheet(character) {
+  recalculate(character);
+  return {
+    ...character,
+    ancestry: ancestryById(character.ancestryId),
+    klass: classById(character.classId),
+    background: backgroundById(character.backgroundId),
+    mods: Object.fromEntries(ABILITY_IDS.map(id => [id, abilityMod(character.abilities[id])])),
+    skillMods: Object.fromEntries(SKILLS.map(s => [s.id, skillMod(character, s.id)])),
+    saveMods: Object.fromEntries(ABILITY_IDS.map(id => [id, saveMod(character, id)])),
+    passivePerception: passive(character, 'perception'),
+    attacks: attackOptions(character),
+    spellList: spellOptions(character),
+    sneakDice: character.classId === 'rogue' ? sneakAttackDice(character.level) : null,
+  };
+}
+
+/** A ready-made party for players who want to skip creation. */
+export function pregeneratedParty() {
+  return [
+    createCharacter({
+      name: 'ガレス', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier',
+      abilities: { str: 15, dex: 13, con: 14, int: 10, wis: 12, cha: 8 },
+      skills: ['athletics', 'intimidation'],
+      notes: '砦から逃げてきた男。誰かを守る仕事だけは続けている。',
+    }),
+    createCharacter({
+      name: 'ニケ', classId: 'rogue', ancestryId: 'halfling', backgroundId: 'thief',
+      abilities: { str: 8, dex: 15, con: 13, int: 12, wis: 10, cha: 14 },
+      skills: ['stealth', 'sleight', 'perception', 'investigation'],
+      expertise: ['stealth', 'sleight'],
+      notes: '軽い足と軽い口。借金だけが重い。',
+    }),
+    createCharacter({
+      name: 'イレーヌ', classId: 'mage', ancestryId: 'elf', backgroundId: 'scholar',
+      abilities: { str: 8, dex: 14, con: 12, int: 15, wis: 13, cha: 10 },
+      skills: ['arcana', 'history'], spells: ['magicMissile', 'burningHands', 'sleep'],
+      notes: '学院を追われた理由を、まだ誰にも話していない。',
+    }),
+    createCharacter({
+      name: 'ボルド', classId: 'cleric', ancestryId: 'dwarf', backgroundId: 'acolyte',
+      abilities: { str: 13, dex: 10, con: 14, int: 10, wis: 15, cha: 12 },
+      skills: ['religion', 'medicine'], spells: ['cureWounds', 'bless', 'shieldOfFaith'],
+      notes: '神は沈黙している。それでも祈りは効く。',
+    }),
+  ];
+}
+
+/** Restore a character loaded from JSON: fills in anything a new build added. */
+export function reviveCharacter(data) {
+  const character = { conditions: [], inventory: [], spells: [], cantrips: [], resources: {}, ...data };
+  character.abilities = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(data.abilities || {}) };
+  character.level = Math.max(1, Math.min(10, character.level || 1));
+  recalculate(character);
+  if (character.hp === undefined || character.hp === null) character.hp = character.maxHp;
+  return character;
+}
+
+/** Full recovery, used between chapters and by the session tool. */
+export function restParty(party) {
+  for (const c of party) { longRest(c); recalculate(c); }
+  return party;
+}

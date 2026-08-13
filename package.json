@@ -1,0 +1,21 @@
+{
+  "name": "tomoshibi-no-table",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ブラウザだけで遊べる d20 系 TRPG。ソロプレイ・セッション支援・シナリオ工房。",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.js",
+    "dev": "node tools/serve.js",
+    "test": "node --test tests/*.test.js",
+    "smoke": "node tools/smoke.js",
+    "build": "node tools/build.js",
+    "icons": "node tools/icons.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}
