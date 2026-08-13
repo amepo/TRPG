@@ -8,6 +8,7 @@ import { partyScreen } from './ui/builder.js';
 import { startSolo, resumeSolo } from './ui/solo.js';
 import { TableScreen } from './ui/table.js';
 import { EditorScreen } from './ui/editor.js';
+import { worldScreen } from './ui/world.js';
 import { Session } from './core/engine.js';
 import { startTheming } from './ui/theme.js';
 import { useWorld, DEFAULT_WORLD } from './worlds/index.js';
@@ -19,6 +20,7 @@ const TITLES = {
   play: '冒険',
   table: 'セッション支援',
   editor: 'シナリオ工房',
+  world: '世界',
 };
 
 class App {
@@ -85,6 +87,9 @@ class App {
         break;
       case 'editor':
         new EditorScreen(this.screen, { app: this });
+        break;
+      case 'world':
+        worldScreen(this.screen, { app: this });
         break;
       case 'home':
       default:

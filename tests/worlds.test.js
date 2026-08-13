@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { WORLDS, worldById, useWorld, activeWorld, catalogue, DEFAULT_WORLD } from '../js/worlds/index.js';
+import { WORLDS, worldById, useWorld, activeWorld, catalogue, register, DEFAULT_WORLD } from '../js/worlds/index.js';
+import { LORE, hasLore, rollTable, randomName } from '../js/core/lore.js';
 import * as content from '../js/core/content.js';
 import * as rules from '../js/core/rules.js';
 import { createCharacter, pregeneratedParty, recalculate } from '../js/core/character.js';
@@ -430,4 +431,52 @@ test('a save records its world and restores into it', () => {
   assert.equal(restored.world, 'neon');
   assert.equal(activeWorld().id, 'neon');
   assert.equal(restored.nodeId, session.nodeId);
+});
+
+/* ------------------------------------------------------------- 読み物 */
+
+test('どの世界にも読み物が揃っている', () => {
+  for (const world of WORLDS) {
+    useWorld(world.id);
+    assert.ok(hasLore(), `${world.id}: 読み物がない`);
+    assert.ok(LORE.primer.length >= 3, `${world.id}: 導入が短すぎる`);
+    assert.ok(LORE.places.length >= 5, `${world.id}: 土地が少ない`);
+    assert.ok(LORE.factions.length >= 3, `${world.id}: 勢力が少ない`);
+    assert.ok(LORE.tables.length >= 3, `${world.id}: 表が少ない`);
+    for (const table of LORE.tables) {
+      assert.ok(table.id && table.name, `${world.id}: 表に id か名前がない`);
+      assert.ok(table.entries.length >= 8, `${world.id}/${table.name}: 項目が8未満`);
+      assert.equal(new Set(table.entries).size, table.entries.length, `${world.id}/${table.name}: 重複した項目`);
+    }
+  }
+});
+
+test('表を振ると、その表の中から返る', () => {
+  useWorld('embers');
+  const rng = new Rng(11);
+  const table = LORE.tables[0];
+  for (let i = 0; i < 20; i++) assert.ok(table.entries.includes(rollTable(table, rng)));
+  assert.equal(rollTable('存在しない表', rng), null);
+});
+
+test('名前はその世界のものが出る', () => {
+  const rng = new Rng(12);
+  useWorld('embers');
+  const fantasyNames = Array.from({ length: 30 }, () => randomName(rng));
+  useWorld('neon');
+  const neonNames = Array.from({ length: 30 }, () => randomName(rng));
+  // ネオン側は姓を持つので、必ず区切りが入る。混ざっていたら世界が漏れている。
+  assert.ok(neonNames.every(n => n.includes('・')));
+  assert.ok(fantasyNames.every(n => !n.includes('・')));
+});
+
+test('読み物を持たない世界でも空の器が返る', () => {
+  const bare = { id: 'bare', name: '素', abilities: [], skills: [], ancestries: {}, classes: {}, backgrounds: {}, weapons: {}, armors: {}, items: {}, spells: {}, classSpells: {}, monsters: {} };
+  register(bare);
+  useWorld('bare');
+  assert.equal(hasLore(), false);
+  assert.deepEqual(LORE.tables, []);
+  assert.equal(randomName(new Rng(1)), null);
+  useWorld(DEFAULT_WORLD);
+  WORLDS.splice(WORLDS.indexOf(bare), 1);        // 他のテストに置き土産を残さない
 });

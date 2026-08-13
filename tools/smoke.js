@@ -318,6 +318,36 @@ try {
     await page.locator('#sheetClose').click();
   });
 
+  await step('世界：読み物が開いて、表が振れる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('世界');
+    await page.getByText('この街／この地方について').waitFor();
+    // 表を振ると、結果が1行増える。
+    const card = page.locator('.card').filter({ hasText: '宿で聞く噂' });
+    const before = await card.locator('p').count();
+    await card.getByRole('button', { name: '振る' }).click();
+    const after = await card.locator('p').count();
+    if (after <= before) throw new Error('表を振っても結果が出ない');
+  });
+
+  await step('世界：切り替えると読み物も入れ替わる', async () => {
+    await page.getByRole('button', { name: /ネオンの雨/ }).first().click();
+    await page.getByText('メリディアン・タワー').waitFor();
+    const stale = await page.getByText('ヴェルナ村').count();
+    if (stale) throw new Error('前の世界の読み物が残っている');
+  });
+
+  await step('サイバーパンクの登場人物名が世界に合っている', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByRole('button', { name: /ネオンの雨/ }).first().click();
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');
+    const name = await page.locator('.pc__name').first().innerText();
+    // 企業の街に「ガレス」や「イレーヌ」が出てきたら、名簿が切り替わっていない。
+    if (/ガレス|イレーヌ|ボルド|ニケ/.test(name)) throw new Error(`世界に合わない名前: ${name}`);
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

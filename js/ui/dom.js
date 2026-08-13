@@ -91,4 +91,15 @@ export function hpBar(hp, maxHp) {
   ]);
 }
 
+/* 本文の **強調** だけを解釈する。マークダウン一式は要らない——地の文で
+   一語を立てたい場面しかなく、それ以上を許すと本文が HTML になる。 */
+export function richText(text) {
+  const out = frag();
+  for (const [i, part] of String(text ?? '').split('**').entries()) {
+    if (!part) continue;
+    out.append(i % 2 ? el('strong', { text: part }) : document.createTextNode(part));
+  }
+  return out;
+}
+
 export const signed = n => (n < 0 ? `−${Math.abs(n)}` : `+${n}`);

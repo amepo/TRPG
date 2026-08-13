@@ -21,6 +21,21 @@ let current = fantasy;
 
 export const worldById = id => WORLDS.find(w => w.id === id) || null;
 
+/**
+ * 世界を1つ足す。同じ id があれば差し替える。
+ * 世界はただのデータなので、ここに載せた時点でエンジンも工房もそのまま動く。
+ * @param {object} world
+ * @returns {object} 登録した世界
+ */
+export function register(world) {
+  if (!world?.id) throw new Error('世界には id が要ります');
+  const at = WORLDS.findIndex(w => w.id === world.id);
+  if (at >= 0) WORLDS[at] = world;
+  else WORLDS.push(world);
+  if (current.id === world.id) { current = world; for (const fn of listeners) fn(current); }
+  return world;
+}
+
 /** The world in play right now. */
 export const activeWorld = () => current;
 

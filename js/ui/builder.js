@@ -12,14 +12,17 @@ import {
 } from '../core/character.js';
 import { ANCESTRIES, CLASSES, BACKGROUNDS, CLASS_SPELLS, spellById, label } from '../core/content.js';
 import { traitList } from '../core/traits.js';
+import { randomName } from '../core/lore.js';
 import { ABILITIES, ABILITY_IDS, abilityMod, SKILLS, skillName } from '../core/rules.js';
 import { Rng } from '../core/rng.js';
 import { listCharacters, putCharacter, deleteCharacter } from '../core/store.js';
 
-const NAMES = [
-  'アルド', 'ミラ', 'ケイン', 'セラ', 'ドラン', 'ユナ', 'ガレス', 'ニケ', 'イレーヌ', 'ボルド',
-  'テオ', 'リサ', 'ハウル', 'エマ', 'ヴィク', 'ノラ', 'ルーカ', 'アイナ', 'グレン', 'シーナ',
+/* 名前は世界のもの。読み物に名簿があればそこから、無ければこの控えから。
+   企業の街でガレスやイレーヌが出てくると、それだけで嘘になる。 */
+const FALLBACK_NAMES = [
+  'アルド', 'ミラ', 'ケイン', 'セラ', 'ドラン', 'ユナ', 'テオ', 'リサ', 'ノラ', 'グレン',
 ];
+const pickName = rng => randomName(rng) || rng.pick(FALLBACK_NAMES);
 
 /* ---------------------------------------------------------- party picker */
 
@@ -102,7 +105,7 @@ export function randomCharacter(rng = new Rng()) {
   const spells = (CLASS_SPELLS[klass.id] || []).slice(0, klass.caster ? 3 : 0);
 
   return createCharacter({
-    name: rng.pick(NAMES),
+    name: pickName(rng),
     classId: klass.id, ancestryId: ancestry.id, backgroundId: background.id,
     abilities, skills, spells,
     expertise: klass.expertiseChoices ? skills.slice(0, klass.expertiseChoices) : [],

@@ -45,6 +45,7 @@ export function homeScreen(root, { app }) {
       modeTile('🗺️', 'ソロプレイ', 'シナリオを選んで、一人で最初から最後まで遊ぶ。判定も戦闘も自動で処理される。', () => app.go('scenarios')),
       modeTile('🎲', 'セッション支援', '対面やオンラインの卓で使う道具。ダイス、キャラクターシート、イニシアチブ表。', () => app.go('table')),
       modeTile('✍️', 'シナリオ工房', '自分の物語を書く。場面をつなぎ、判定と戦闘を置いて、そのまま遊べる。', () => app.go('editor')),
+      modeTile('🌍', '世界', 'どんな場所で遊んでいるのか。土地、勢力、顔ぶれ、そして卓で振れる表。', () => app.go('world')),
     ]),
 
     el('div', { class: 'card card--flat' }, [

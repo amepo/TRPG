@@ -14,6 +14,7 @@ import { MONSTERS, monsterById } from '../core/content.js';
 import { listCharacters, putCharacter, getPrefs, setPref } from '../core/store.js';
 import { openBuilder, randomCharacter, openSaved } from './builder.js';
 import { WORLDS, useWorld, activeWorld, DEFAULT_WORLD } from '../worlds/index.js';
+import { lorePanel } from './world.js';
 
 const QUICK_DICE = ['1d20', '1d4', '1d6', '1d8', '1d10', '1d12', '1d100'];
 
@@ -60,12 +61,15 @@ export class TableScreen {
         onclick: () => this.switchWorld(world.id),
       }, [`${world.icon} ${world.name}`]))),
       el('div', { class: 'chips' }, [
-        ['dice', '🎲 ダイス'], ['chars', '📜 キャラクター'], ['init', '⚔️ 進行'],
+        ['dice', '🎲 ダイス'], ['chars', '📜 キャラクター'], ['init', '⚔️ 進行'], ['lore', '🌍 世界'],
       ].map(([id, label]) => el('button', {
         class: `chip ${this.tab === id ? 'is-on' : ''}`,
         onclick: () => { this.tab = id; setPref('tableTab', id); this.render(); },
       }, [label]))),
-      this.tab === 'dice' ? this.diceTab() : this.tab === 'chars' ? this.charsTab() : this.initTab(),
+      this.tab === 'dice' ? this.diceTab()
+        : this.tab === 'chars' ? this.charsTab()
+          : this.tab === 'lore' ? lorePanel()
+            : this.initTab(),
     ]));
   }
 

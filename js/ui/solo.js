@@ -1,6 +1,6 @@
 /* The solo play screen: transcript, choices, party, and the combat panel. */
 
-import { el, frag, clear, toast, openSheet, closeSheet, confirmSheet, button } from './dom.js';
+import { el, frag, clear, toast, openSheet, closeSheet, confirmSheet, button, richText } from './dom.js';
 import { partyList, openCharacterSheet } from './sheet.js';
 import { Session } from '../core/engine.js';
 import { skillName } from '../core/rules.js';
@@ -66,7 +66,7 @@ export class SoloScreen {
   logLine(entry) {
     const line = el('p', { class: `log__line line-${entry.kind}` });
     if (entry.kind === 'scene' && entry.art) line.append(el('span', { text: entry.art }));
-    line.append(document.createTextNode(entry.text));
+    line.append(richText(entry.text));
     if (entry.roll?.natural) {
       line.append(el('span', { class: 'log__roll', text: `d20:${entry.roll.natural}` }));
     }
