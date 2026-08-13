@@ -8,6 +8,7 @@ import { spellById, label } from '../core/content.js';
 import { catalogue as augmentCatalogue, summary as augmentSummary, install, remove, hasAugments } from '../core/augment.js';
 import { recalculate } from '../core/character.js';
 import { traitList } from '../core/traits.js';
+import { hasStanding, standingLabel, standingSpec, tierOf, priceScale } from '../core/standing.js';
 
 /** One row in the party list. */
 export function partyRow(pc, { onClick, current = false } = {}) {
@@ -60,6 +61,11 @@ export function characterSheet(character, { onChange } = {}) {
     kv(label('hitDice', 'ヒットダイス'), `${view.hitDice ?? view.level} × ${view.hitDie}`),
     kv('経験点', `${view.xp || 0}`),
     view.gold !== undefined ? kv(label('gold', '所持金'), money(view.gold)) : null,
+    hasStanding() ? kv(standingSpec().name, standingLabel(character)) : null,
+    hasStanding() ? el('p', {
+      class: 'tiny faint', style: { lineHeight: '1.7', marginTop: '2px' },
+      text: tierOf(character.standing ?? 0)?.note || '',
+    }) : null,
   ]);
 
   const saves = el('div', { class: 'chips' }, ABILITIES.map(a =>
@@ -183,7 +189,11 @@ function augmentBlock(character, onChange) {
       el('span', { class: 'aug__strain' }, [
         el('span', { text: `負荷 ${aug.strain}` }),
         // 負荷だけでなく値段も見せる。天秤が両方ないと、入れない理由が消える。
-        installed ? null : el('span', { class: 'tiny faint', style: { display: 'block' }, text: money(aug.cost) }),
+        // 値段は立場で動くので、実際に払う額を出す。
+        installed ? null : el('span', {
+          class: 'tiny faint', style: { display: 'block' },
+          text: money(Math.round(aug.cost * priceScale(character))),
+        }),
       ]),
     ]);
   });

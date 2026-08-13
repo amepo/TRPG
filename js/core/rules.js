@@ -181,7 +181,10 @@ export function savingThrow(actor, ability, dc, opts = {}) {
   const { rng, advantage = false, disadvantage = false, bonus = 0, vs = null } = opts;
   // `vs` names what the save is against (毒、魅了…) so a trait can grant an
   // edge against that specific thing rather than against every save.
-  const adv = advantage || (vs && traitPassives(actor).saveAdvantageVs.includes(vs));
+  // 有利の出どころは特性と装備の両方。作成時に畳んだ値があればそれを使う。
+  const adv = advantage || (vs && (
+    actor.saveAdvantageVs?.includes(vs) || traitPassives(actor).saveAdvantageVs.includes(vs)
+  ));
   const dis = disadvantage || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
   const mode = resolveMode({ advantage: adv, disadvantage: dis });
   let mod = saveMod(actor, ability) + bonus;

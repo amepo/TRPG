@@ -229,19 +229,26 @@ export function playtest(scenario, { runs = 80, level = 1 } = {}) {
 
   /* ------------------------------------------------------- 問題の検出 */
 
+  /* 数%しか通らない結末は、試行が薄いと単に運で漏れる。断定するには
+     それなりの回数が要るので、足りないうちは警告に落とす。
+     （実例: 3% で出る結末が 80回では 1割近い確率で「到達しない」と出た） */
+  const CONFIDENT = 200;
+  const sureEnough = runs * 2 >= CONFIDENT;          // 2種のボットぶん
+
   const unreachedEndings = declaredEndings.filter(t => !endingsEver.has(t));
   if (unreachedEndings.length) {
     report.problems.push({
-      level: 'error',
-      text: `書いたのに一度も到達しない結末: ${unreachedEndings.join('、')}`,
+      level: sureEnough ? 'error' : 'warn',
+      text: `一度も到達しなかった結末: ${unreachedEndings.join('、')}`
+        + (sureEnough ? '' : `（${runs}回では稀な分岐を拾い切れません。--runs=${Math.ceil(CONFIDENT / 2)} で確かめてください）`),
     });
   }
 
   const unvisited = nodes.filter(id => !visitedEver.has(id));
   if (unvisited.length) {
     report.problems.push({
-      level: 'error',
-      text: `一度も訪れない場面: ${unvisited.join('、')}`,
+      level: sureEnough ? 'error' : 'warn',
+      text: `一度も訪れなかった場面: ${unvisited.join('、')}`,
     });
   }
 
@@ -361,8 +368,8 @@ if (target && !scenarios.length) {
 }
 
 console.log(`プレイテスト — ${scenarios.length}本 × ${runs}回 × 2ボット`);
-if (runs < 50) {
-  console.log('  ※ 試行が少ないと稀な結末を拾えず「到達しない」と誤検知します（--runs=80 以上を推奨）');
+if (runs * 2 < 200) {
+  console.log(`  ※ ${runs}回では稀な分岐を拾い切れないため、未到達は警告どまりにします（--runs=100 で断定）`);
 }
 
 let errors = 0;

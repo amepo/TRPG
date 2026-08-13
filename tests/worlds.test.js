@@ -182,8 +182,9 @@ test('overloading the body penalises every roll', () => {
   assert.ok(over > 0, '超過していない');
   assert.equal(pc.strainOver, over);
   assert.equal(rules.saveMod(pc, 'str'), save - over);
-  // The optic suite still grants its +2, so athletics moves by (2 − over).
-  assert.equal(rules.skillMod(pc, 'athletics'), clean - over);
+  // 装備の補正はそのまま乗り、超過ぶんはその上から引かれる。
+  const gear = pc.skillBonus?.athletics || 0;
+  assert.equal(rules.skillMod(pc, 'athletics'), clean + gear - over);
   assert.equal(summary(pc).state, 'over');
 });
 

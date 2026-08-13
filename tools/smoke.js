@@ -348,6 +348,27 @@ try {
     if (/ガレス|イレーヌ|ボルド|ニケ/.test(name)) throw new Error(`世界に合わない名前: ${name}`);
   });
 
+  await step('ネオ東京：区画と信用スコアが読める', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('世界');
+    await page.getByRole('button', { name: /ネオンの雨/ }).first().click();
+    await page.getByText('ネオアビス').first().waitFor();
+    await page.getByText('企業級').first().waitFor();
+  });
+
+  await step('信用スコアがキャラクターシートに出る', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByRole('button', { name: /ネオンの雨/ }).first().click();
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    const body = await page.locator('dialog[open]').innerText();
+    if (!body.includes('信用スコア')) throw new Error('シートに信用スコアが出ていない');
+    await page.locator('#sheetClose').click();
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

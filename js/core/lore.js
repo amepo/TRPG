@@ -11,7 +11,7 @@
 import { onWorld } from '../worlds/index.js';
 
 const EMPTY = {
-  primer: [], timeline: [], truths: [], places: [], factions: [], figures: [],
+  primer: [], timeline: [], truths: [], districts: [], places: [], factions: [], figures: [],
   economy: null, names: { given: [], family: [] }, tables: [],
 };
 

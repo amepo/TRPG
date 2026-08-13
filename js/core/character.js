@@ -17,6 +17,7 @@ import {
 } from './content.js';
 import { aggregate, strainUsed, strainCapacity, hasAugments } from './augment.js';
 import { traitPassives } from './traits.js';
+import { startingStanding, clampStanding, hasStanding } from './standing.js';
 import { activeWorld } from '../worlds/index.js';
 
 export const POINT_BUY_BUDGET = 27;
@@ -75,6 +76,10 @@ export function createCharacter(draft = {}) {
     expertise: (draft.expertise || []).slice(0, klass.expertiseChoices || 0),
     saves: [...klass.saves],
     traits: [...(ancestry.traits || [])],
+    // 立場は世界のもの。無い世界では 0 のまま誰も見ない。
+    standing: hasStanding()
+      ? clampStanding(startingStanding() + (ancestry.standing || 0))
+      : 0,
     speed: ancestry.speed,
     hitDie: klass.hitDie,
     conditions: [],
@@ -148,6 +153,13 @@ export function recalculate(character) {
   if (character.hp === undefined) character.hp = character.maxHp;
   character.hp = Math.min(character.hp, character.maxHp);
 
+  // 脚の改造は移動そのものを変える。素の値は種族が持っている。
+  character.speed = (ancestry.speed || 9) + (character.augmentSpeed || 0);
+  // セーヴの有利は、特性と改造の両方から来る。
+  character.saveAdvantageVs = [...new Set([
+    ...traits.saveAdvantageVs, ...(character.augmentSaveAdvantageVs || []),
+  ])];
+
   character.proficiency = proficiencyBonus(character.level);
   character.ac = armorClass(character);
   character.initiative = abilityMod(character.abilities.dex)
@@ -181,6 +193,8 @@ function applyAugments(character, ancestry, traits = traitPassives(character)) {
   character.attackMod = 0;
   character.augmentHpPerLevel = 0;
   character.augmentAttacks = [];
+  character.augmentSpeed = 0;
+  character.augmentSaveAdvantageVs = [];
   character.resistances = [...new Set([...(ancestry.resistances || []), ...traits.resistances])];
   character.immunities = [...new Set([...(ancestry.immunities || []), ...traits.immunities])];
   character.conditionImmunities = [...traits.conditionImmunities];
@@ -197,6 +211,8 @@ function applyAugments(character, ancestry, traits = traitPassives(character)) {
   character.attackMod = bonuses.attackBonus;
   character.augmentHpPerLevel = bonuses.hpPerLevel;
   character.augmentAttacks = bonuses.attacks;
+  character.augmentSpeed = bonuses.speed;
+  character.augmentSaveAdvantageVs = [...bonuses.saveAdvantageVs];
   character.resistances = [...new Set([...character.resistances, ...bonuses.resistances])];
   character.immunities = [...new Set([...character.immunities, ...bonuses.immunities])];
 

@@ -8,6 +8,7 @@
 
 import { activeWorld } from '../worlds/index.js';
 import { abilityMod } from './rules.js';
+import { priceScale } from './standing.js';
 
 /** この世界に用意されている改造の一覧。無い世界では空。 */
 export const catalogue = () => Object.values(activeWorld().augments || {});
@@ -49,7 +50,8 @@ export function install(character, id, { free = false } = {}) {
   character.augments = character.augments || [];
   if (character.augments.includes(id)) return { ok: false, reason: 'すでに入っています' };
 
-  const price = free ? 0 : (augment.cost || 0);
+  // 同じ義体でも、信用のない相手には高く売る。足元を見るのはこの街の作法だ。
+  const price = free ? 0 : Math.round((augment.cost || 0) * priceScale(character));
   if (price > (character.gold || 0)) {
     return { ok: false, reason: `資金が足りません（${price} 必要、残り ${character.gold || 0}）` };
   }
@@ -75,9 +77,11 @@ export function aggregate(character) {
     initiativeBonus: 0,
     attackBonus: 0,
     hpPerLevel: 0,
+    speed: 0,
     skillBonus: {},
     resistances: [],
     immunities: [],
+    saveAdvantageVs: [],
     keywords: [],
     attacks: [],
   };
@@ -88,11 +92,13 @@ export function aggregate(character) {
     out.initiativeBonus += effect.initiativeBonus || 0;
     out.attackBonus += effect.attackBonus || 0;
     out.hpPerLevel += effect.hpPerLevel || 0;
+    out.speed += effect.speed || 0;
     for (const [skill, value] of Object.entries(effect.skillBonus || {})) {
       out.skillBonus[skill] = (out.skillBonus[skill] || 0) + value;
     }
     out.resistances.push(...(effect.resistances || []));
     out.immunities.push(...(effect.immunities || []));
+    out.saveAdvantageVs.push(...(effect.saveAdvantageVs || []));
     out.keywords.push(...(effect.keywords || []));
     if (effect.attack) out.attacks.push(effect.attack);
   }

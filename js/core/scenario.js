@@ -30,6 +30,7 @@
 */
 
 import { label } from './content.js';
+import { adjustStanding, hasStanding, standingSpec, tierOf } from './standing.js';
 
 /* ------------------------------------------------------------- conditions */
 
@@ -60,6 +61,17 @@ export function testCondition(cond, ctx) {
     return !!value;
   }
 
+  if (cond.standing !== undefined) {
+    // 立場は一行のうち「いちばん通りのいい者」で見る。誰か一人が通れば話は通る。
+    const best = Math.max(0, ...(ctx.party || []).map(pc => pc.standing ?? 0));
+    const want = cond.standing;
+    if (typeof want === 'number') return best >= want;
+    if (want.gte !== undefined) return best >= want.gte;
+    if (want.lte !== undefined) return best <= want.lte;
+    if (want.eq !== undefined) return best === want.eq;
+    return true;
+  }
+
   if (cond.has !== undefined) {
     return (ctx.party || []).some(pc => pc.inventory?.some(i => i.id === cond.has && i.count > 0));
   }
@@ -83,6 +95,11 @@ export function describeCondition(cond) {
   if (cond.flag) return `「${cond.flag}」が必要`;
   if (cond.has) return `アイテム「${cond.has}」が必要`;
   if (cond.var) return `${cond.var} が条件を満たすこと`;
+  if (cond.standing !== undefined) {
+    const name = standingSpec()?.name || '立場';
+    const need = typeof cond.standing === 'number' ? cond.standing : cond.standing.gte;
+    return need === undefined ? `${name}の条件` : `${name}「${tierOf(need)?.name ?? need}」以上が必要`;
+  }
   if (cond.skillIn) return `技能（${cond.skillIn.join('/')}）が必要`;
   if (cond.classIn) return `${cond.classIn.join('/')} が必要`;
   return '条件を満たすこと';
@@ -146,6 +163,19 @@ export function applyEffects(effects, ctx) {
         say(`${label('gold', '所持金')} ${amount > 0 ? '+' : ''}${amount} ${label('goldUnit', '枚')}`,
           amount > 0 ? 'good' : 'bad');
       }
+    }
+
+    if (effect.standing && hasStanding()) {
+      const name = standingSpec()?.short || '立場';
+      for (const pc of ctx.party || []) {
+        const moved = adjustStanding(pc, effect.standing);
+        // 段位が変わったときだけ言う。1目盛り動くたびに報告すると煩い。
+        if (moved.changedTier) {
+          say(`${pc.name}の${name}が「${moved.tier?.name}」になった。${moved.tier?.note ? `（${moved.tier.note}）` : ''}`,
+            effect.standing > 0 ? 'good' : 'bad');
+        }
+      }
+      if (effect.note) say(effect.note, effect.standing > 0 ? 'good' : 'bad');
     }
 
     if (effect.xp) { ctx.awardXp?.(effect.xp); }

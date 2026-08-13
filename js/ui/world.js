@@ -6,6 +6,7 @@
 import { el, clear, frag, button, richText, toast } from './dom.js';
 import { WORLDS, useWorld, activeWorld } from '../worlds/index.js';
 import { LORE, rollTable, randomName, hasLore } from '../core/lore.js';
+import { hasStanding, standingSpec } from '../core/standing.js';
 import { Rng } from '../core/rng.js';
 
 const rng = new Rng(Date.now());
@@ -31,6 +32,8 @@ export function lorePanel({ withHeader = false } = {}) {
     withHeader ? header(activeWorld()) : null,
     primer(),
     truthsCard(),
+    standingCard(),
+    districtsCard(),
     economyCard(),
     timelineCard(),
     listCard('土地', LORE.places, p => [p.name, p.blurb]),
@@ -85,6 +88,40 @@ const truthsCard = () => (LORE.truths.length ? el('div', { class: 'card stack' }
     el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: t.text }),
   ])),
 ]) : null);
+
+/* 立場の段位。ここは読み物ではなくルールなので、効果まで並べる。 */
+function standingCard() {
+  if (!hasStanding()) return null;
+  const spec = standingSpec();
+  return el('div', { class: 'card stack' }, [
+    el('h3', { class: 'card__title', text: spec.name }),
+    spec.blurb ? el('p', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: spec.blurb }) : null,
+    ...[...spec.tiers].reverse().map(t => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
+      el('div', { class: 'spread' }, [
+        el('span', { style: { fontWeight: '600' }, text: `${t.name}（${t.at}）` }),
+        el('span', { class: 'tiny faint', text: `物価 ×${t.priceScale}` }),
+      ]),
+      el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: t.note || '' }),
+    ])),
+  ]);
+}
+
+/* 区画。「どこにいるか」で空気も物価も変わる、を一覧で。 */
+function districtsCard() {
+  if (!LORE.districts?.length) return null;
+  return el('div', { class: 'card stack' }, [
+    el('h3', { class: 'card__title', text: '区画' }),
+    ...LORE.districts.map(d => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '12px' } }, [
+      el('div', { class: 'spread' }, [
+        el('span', { style: { fontWeight: '600' }, text: d.name }),
+        el('span', { class: 'tiny faint', text: `物価 ×${d.priceScale}` }),
+      ]),
+      el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: d.blurb }),
+      el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `空気：${d.air}　／　縄張り：${d.turf}` }),
+      el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `▸ ${d.entry}` }),
+    ])),
+  ]);
+}
 
 /* 物価。報酬の数字が何を意味するのか、これが無いと最後まで分からない。 */
 function economyCard() {
