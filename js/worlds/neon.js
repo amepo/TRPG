@@ -191,44 +191,44 @@ const BACKGROUNDS = [
 /* ----------------------------------------------------------------- 装備 */
 
 const WEAPONS = {
-  pistol: { id: 'pistol', name: 'ハンドガン', damage: '1d8', type: '実弾', ability: 'dex', tags: ['遠隔'], ranged: true },
-  smg: { id: 'smg', name: 'サブマシンガン', damage: '1d6', type: '実弾', ability: 'dex', tags: ['遠隔', '連射'], ranged: true },
+  pistol: { id: 'pistol', cost: 250, name: 'ハンドガン', damage: '1d8', type: '実弾', ability: 'dex', tags: ['遠隔'], ranged: true },
+  smg: { id: 'smg', cost: 600, name: 'サブマシンガン', damage: '1d6', type: '実弾', ability: 'dex', tags: ['遠隔', '連射'], ranged: true },
   /* 遠隔は反撃を受けないぶん有利なので、ダメージの上限は 1d10 に抑える
      （SRD が重クロスボウ 1d10、近接に 1d12 を割り当てているのと同じ理由）。
      重火器は反動を支える体格を要求し、体力が足りないと命中に不利がつく。 */
-  rifle: { id: 'rifle', name: 'アサルトライフル', damage: '1d10', type: '実弾', ability: 'dex', tags: ['遠隔', '両手', '重火器'], ranged: true, heavy: true },
-  shotgun: { id: 'shotgun', name: 'ショットガン', damage: '1d10', type: '実弾', ability: 'dex', tags: ['遠隔', '両手', '重火器'], ranged: true, heavy: true },
-  taser: { id: 'taser', name: 'テイザー', damage: '1d4', type: '電撃', ability: 'dex', tags: ['遠隔'], ranged: true },
-  monoblade: { id: 'monoblade', name: 'モノフィラ・ブレード', damage: '1d8', type: '斬撃', ability: 'dex', tags: ['近接'] },
-  katana: { id: 'katana', name: 'カタナ', damage: '1d8', type: '斬撃', ability: 'dex', tags: ['近接'] },
-  knuckles: { id: 'knuckles', name: '強化ナックル', damage: '1d8', type: '打撃', ability: 'str', tags: ['近接'] },
-  stunbaton: { id: 'stunbaton', name: 'スタンバトン', damage: '1d6', type: '電撃', ability: 'str', tags: ['近接'] },
-  cleaver: { id: 'cleaver', name: '工業用クリーバー', damage: '1d12', type: '斬撃', ability: 'str', tags: ['近接', '両手'] },
-  unarmed: { id: 'unarmed', name: '素手', damage: '1d2', type: '打撃', ability: 'str', tags: ['近接'] },
+  rifle: { id: 'rifle', cost: 900, name: 'アサルトライフル', damage: '1d10', type: '実弾', ability: 'dex', tags: ['遠隔', '両手', '重火器'], ranged: true, heavy: true },
+  shotgun: { id: 'shotgun', cost: 550, name: 'ショットガン', damage: '1d10', type: '実弾', ability: 'dex', tags: ['遠隔', '両手', '重火器'], ranged: true, heavy: true },
+  taser: { id: 'taser', cost: 150, name: 'テイザー', damage: '1d4', type: '電撃', ability: 'dex', tags: ['遠隔'], ranged: true },
+  monoblade: { id: 'monoblade', cost: 800, name: 'モノフィラ・ブレード', damage: '1d8', type: '斬撃', ability: 'dex', tags: ['近接'] },
+  katana: { id: 'katana', cost: 400, name: 'カタナ', damage: '1d8', type: '斬撃', ability: 'dex', tags: ['近接'] },
+  knuckles: { id: 'knuckles', cost: 120, name: '強化ナックル', damage: '1d8', type: '打撃', ability: 'str', tags: ['近接'] },
+  stunbaton: { id: 'stunbaton', cost: 100, name: 'スタンバトン', damage: '1d6', type: '電撃', ability: 'str', tags: ['近接'] },
+  cleaver: { id: 'cleaver', cost: 60, name: '工業用クリーバー', damage: '1d12', type: '斬撃', ability: 'str', tags: ['近接', '両手'] },
+  unarmed: { id: 'unarmed', cost: 0, name: '素手', damage: '1d2', type: '打撃', ability: 'str', tags: ['近接'] },
 };
 
 const ARMORS = {
-  weave: { id: 'weave', name: '皮下ウィーヴ', base: 11, maxDex: undefined },
-  jacket: { id: 'jacket', name: 'アーマージャケット', base: 12, maxDex: undefined },
-  vest: { id: 'vest', name: '防弾ベスト', base: 13, maxDex: 2 },
-  carapace: { id: 'carapace', name: 'カラパス装甲', base: 14, maxDex: 2 },
-  exo: { id: 'exo', name: '外骨格スーツ', base: 16, maxDex: 0, stealth: -2 },
+  weave: { id: 'weave', cost: 600, name: '皮下ウィーヴ', base: 11, maxDex: undefined },
+  jacket: { id: 'jacket', cost: 250, name: 'アーマージャケット', base: 12, maxDex: undefined },
+  vest: { id: 'vest', cost: 500, name: '防弾ベスト', base: 13, maxDex: 2 },
+  carapace: { id: 'carapace', cost: 1200, name: 'カラパス装甲', base: 14, maxDex: 2 },
+  exo: { id: 'exo', cost: 2500, name: '外骨格スーツ', base: 16, maxDex: 0, stealth: -2 },
 };
 
-const SHIELD = { id: 'shield', name: 'ディフレクタ・フィールド', ac: 2 };
+const SHIELD = { id: 'shield', name: 'ディフレクタ・フィールド', ac: 2, cost: 300 };
 
 const ITEMS = {
-  potion: { id: 'potion', name: 'スティムパック', use: 'heal', amount: '2d4+2', desc: '打つと 2d4+2 回復する。', consumable: true },
-  greaterPotion: { id: 'greaterPotion', name: '軍用スティム', use: 'heal', amount: '4d4+4', desc: '打つと 4d4+4 回復する。', consumable: true },
-  antidote: { id: 'antidote', name: '解毒ナノ', use: 'cure', cures: ['poisoned'], desc: '毒状態を取り除く。', consumable: true },
-  bomb: { id: 'bomb', name: '焼夷グレネード', use: 'damage', amount: '2d6', type: '火', area: true, desc: '投げつけて 2d6 の火ダメージ（範囲）。', consumable: true },
-  emp: { id: 'emp', name: 'EMPグレネード', use: 'damage', amount: '3d6', type: '電撃', area: true, desc: '機械系に 3d6 の電撃ダメージ（範囲）。', consumable: true },
-  ropegun: { id: 'ropegun', name: 'ワイヤーガン', desc: '上階へ登る、あるいは降りる。' },
-  torch: { id: 'torch', name: 'ライトスティック', desc: '暗所を照らす。手が1つ塞がる。', light: true },
-  lockpicks: { id: 'lockpicks', name: '電子ピック', desc: '電子錠を開ける判定に必要。' },
-  rations: { id: 'rations', name: '合成食（3日分）', desc: '路上生活に使う。' },
-  deck: { id: 'deck', name: 'サイバーデッキ', desc: 'ネットランに必要な端末。' },
-  medkit: { id: 'medkit', name: '医療キット', desc: '【応急処置】判定に必要。' },
+  potion: { id: 'potion', cost: 100, name: 'スティムパック', use: 'heal', amount: '2d4+2', desc: '打つと 2d4+2 回復する。', consumable: true },
+  greaterPotion: { id: 'greaterPotion', cost: 350, name: '軍用スティム', use: 'heal', amount: '4d4+4', desc: '打つと 4d4+4 回復する。', consumable: true },
+  antidote: { id: 'antidote', cost: 90, name: '解毒ナノ', use: 'cure', cures: ['poisoned'], desc: '毒状態を取り除く。', consumable: true },
+  bomb: { id: 'bomb', cost: 250, name: '焼夷グレネード', use: 'damage', amount: '2d6', type: '火', area: true, desc: '投げつけて 2d6 の火ダメージ（範囲）。', consumable: true },
+  emp: { id: 'emp', cost: 300, name: 'EMPグレネード', use: 'damage', amount: '3d6', type: '電撃', area: true, desc: '機械系に 3d6 の電撃ダメージ（範囲）。', consumable: true },
+  ropegun: { id: 'ropegun', cost: 200, name: 'ワイヤーガン', desc: '上階へ登る、あるいは降りる。' },
+  torch: { id: 'torch', cost: 10, name: 'ライトスティック', desc: '暗所を照らす。手が1つ塞がる。', light: true },
+  lockpicks: { id: 'lockpicks', cost: 120, name: '電子ピック', desc: '電子錠を開ける判定に必要。' },
+  rations: { id: 'rations', cost: 15, name: '合成食（3日分）', desc: '路上生活に使う。' },
+  deck: { id: 'deck', cost: 1500, name: 'サイバーデッキ', desc: 'ネットランに必要な端末。' },
+  medkit: { id: 'medkit', cost: 250, name: '医療キット', desc: '【応急処置】判定に必要。' },
 };
 
 /* --------------------------------------------------------- サイバーウェア */
@@ -238,42 +238,42 @@ const ITEMS = {
 
 const AUGMENTS = {
   opticSuite: {
-    id: 'opticSuite', name: '光学強化眼', slot: '眼', strain: 2, cost: 30,
+    id: 'opticSuite', name: '光学強化眼', slot: '眼', strain: 2, cost: 900,
     desc: '暗視と拡大。【知覚】+2、暗所のペナルティを受けない。',
     effect: { skillBonus: { perception: 2 }, keywords: ['darkvision'] },
   },
   reflexBooster: {
-    id: 'reflexBooster', name: '反射ブースター', slot: '神経', strain: 3, cost: 45,
+    id: 'reflexBooster', name: '反射ブースター', slot: '神経', strain: 3, cost: 1800,
     desc: '神経伝達を短絡させる。イニシアチブ +4、【体術】+1。',
     effect: { initiativeBonus: 4, skillBonus: { acrobatics: 1 } },
   },
   subdermalPlate: {
-    id: 'subdermalPlate', name: '皮下装甲板', slot: '皮膚', strain: 3, cost: 40,
+    id: 'subdermalPlate', name: '皮下装甲板', slot: '皮膚', strain: 3, cost: 1500,
     desc: '肋骨に沿って敷いた合金。AC +1、実弾ダメージに抵抗。',
     effect: { acBonus: 1, resistances: ['実弾'] },
   },
   ripperClaws: {
-    id: 'ripperClaws', name: '格納式クロー', slot: '腕', strain: 2, cost: 35,
+    id: 'ripperClaws', name: '格納式クロー', slot: '腕', strain: 2, cost: 1200,
     desc: '指の骨から伸びる刃。武器として使える 1d8 斬撃。',
     effect: { attack: { id: 'claws', name: '格納クロー', damage: '1d8', type: '斬撃', ability: 'dex' } },
   },
   neuralPort: {
-    id: 'neuralPort', name: '後頭部ポート', slot: '神経', strain: 1, cost: 20,
+    id: 'neuralPort', name: '後頭部ポート', slot: '神経', strain: 1, cost: 600,
     desc: 'デッキに直結する。【電脳】+2、ネットランでの追跡を1段遅らせる。',
     effect: { skillBonus: { netops: 2 }, keywords: ['jack-in'] },
   },
   adrenalPump: {
-    id: 'adrenalPump', name: '副腎ポンプ', slot: '内臓', strain: 3, cost: 40,
+    id: 'adrenalPump', name: '副腎ポンプ', slot: '内臓', strain: 3, cost: 1600,
     desc: '危機に体が勝手に反応する。最大HP +2/レベル。',
     effect: { hpPerLevel: 2 },
   },
   toxinFilter: {
-    id: 'toxinFilter', name: '毒素フィルタ', slot: '内臓', strain: 2, cost: 25,
+    id: 'toxinFilter', name: '毒素フィルタ', slot: '内臓', strain: 2, cost: 800,
     desc: '肝臓の脇に増設した濾過器。毒に免疫、耐性セーヴに有利。',
     effect: { immunities: ['毒'] },
   },
   smartLink: {
-    id: 'smartLink', name: 'スマートリンク', slot: '腕', strain: 2, cost: 35,
+    id: 'smartLink', name: 'スマートリンク', slot: '腕', strain: 2, cost: 1400,
     desc: '銃と手が会話する。遠隔攻撃の命中 +1。',
     effect: { attackBonus: 1 },
   },
@@ -546,30 +546,36 @@ const LORE = {
       name: 'メリディアン複合企業',
       blurb: 'この街の実質的な統治者。塔、農場、水道、そして警備会社を持っている。' +
         '敵に回すのではなく「別の部署と話す」のが正しい戦い方だとされている。',
+      stance: 'ゲンテックを下請けとして飼っている。労組は「相手」ですらなく、法務部の案件でしかない。',
     },
     {
       name: 'ゲンテック生体研究',
       blurb: 'メリディアンの下請けから始まって、いまは臓器と生体部品で独立している。' +
         '素材の出どころを訊かないのが業界の礼儀になっている。',
+      stance: 'メリディアンから独立したがっている。だから外環のノマドと、誰も知らない取引をしている。',
     },
     {
       name: '第4区画労働組合',
       blurb: 'この街に残る数少ない、企業でない組織。積立ては薄く、弁護士は一人しかいない。' +
         'それでも、死んだ人間の名前を数えているのはここだけだ。',
+      stance: '企業すべてが相手。ノヴァ・ギャングとは「下層の味方」として微妙に近い。近すぎると企業に使われる。',
     },
     {
       name: 'ノヴァ・ギャング',
       blurb: '下層の縄張りを持つ集団。企業と違って交渉が通じるが、覚えているのは恩より恨みのほうだ。',
+      stance: '企業の私兵とは撃ち合う。掃除屋には手を出さない——出した縄張りが、去年ひとつ消えている。',
     },
     {
       name: '掃除屋',
       blurb: '組織ではなく職業。企業が「なかったこと」にしたいときに呼ぶ。' +
         '制服は着ていない。制服でない方が、たちが悪い。',
+      stance: '雇い主を選ばない。同じ相手に二度雇われないのが唯一の規則らしい。',
     },
     {
       name: 'ノマド氏族',
       blurb: '外環を走る車列。家族という単位で動き、街の与信を使わない。' +
         '街から出たい人間にとって、唯一の合法でない出口。',
+      stance: '街の勢力とは取引だけ。与信を持たない人間を運べるのは、この街でここだけだ。',
     },
   ],
 
@@ -589,6 +595,44 @@ const LORE = {
     family: [
       'ヴァレン', 'クロフト', 'ナカムラ', 'オルティス', 'ザイツェフ', 'ムーア', 'ハイダル',
       'リンドグレン', 'アバシ', 'ペレス',
+    ],
+  },
+
+
+  timeline: [
+    { when: '約60年前', what: '水道が民営化される。この街が「企業の街」になった日を一つ選ぶなら、たいていの人がここを挙げる。' },
+    { when: '約40年前', what: '上層の気象制御が稼働。三十階から上に雨が降らなくなった。下では降り方が変わった。' },
+    { when: '22年前', what: '警察機構が解体され、区画ごとの警備契約に置き換わる。事件の初動は、以後ずっと私兵が担っている。' },
+    { when: '14年前', what: 'メリディアン農政が第9温室で「収量改善試験」を開始。書類上はまだ続いている。' },
+    { when: '9年前', what: '第4区画の火曜停電が始まる。企業は原因を公表していない。' },
+    { when: '4年前', what: 'ゲンテックが37階の用途を「保守」から「保管」へ書き換える。設計図は差し替えられなかった。' },
+    { when: '今年', what: '第9温室で四人目。組合が外に頼ることを決めた。' },
+  ],
+
+  truths: [
+    { title: '身分は肉体ではなく与信', text: '名前は三つ持っていていい。与信が切れたら一つも使えない。宿にも医者にも、まず信用が要る。' },
+    { title: '警察は来る。企業のあとで', text: '事件の初動はその区画の警備契約を持つ会社が担う。公的な捜査は、来るとすれば、片付いた後だ。' },
+    { title: '電脳は場所ではなく倉庫', text: '入るのは盗むか消すためで、住む場所ではない。長く居れば逆探知され、ブラックICEは本当に脳を焼く。' },
+    { title: '体には上限がある', text: '改造は誰でも入れられるが、受け入れられる量を超えると手が震える。入れすぎた者は街に普通に歩いている。' },
+    { title: '雨は上では降らない', text: '気象制御は上層の設備だ。下で降り方が変わったのは副作用で、直す予算はどの部署にもついていない。' },
+    { title: '死体は処理される', text: '路上の死者は救急ではなく清掃が来る。身元の照会は与信から行われ、与信がなければ照会もされない。' },
+    { title: '外環には与信が届かない', text: '街を出れば企業の記録から消えるが、水も薬も届かない。ノマドが家族という単位で動くのはそのためだ。' },
+  ],
+
+  economy: {
+    unit: '€$',
+    note: '€$20 でカプセルに一泊、€$400 で下層のひと月。運び屋の一件が €$200、金庫室が €$3,000。'
+      + '外骨格スーツが €$2,500 なのは、それが「一生ぶんの仕事」の値段だからだ。',
+    anchors: [
+      { what: 'カプセルホテル（一泊）', cost: 20 },
+      { what: 'まともな部屋（一泊）', cost: 60 },
+      { what: '合成食（3日分）', cost: 15 },
+      { what: '下層のひと月の家賃', cost: 400 },
+      { what: '闇医者の縫合（一回）', cost: 120 },
+      { what: '運び屋の一件', cost: 200 },
+      { what: '護衛・逃走の一件', cost: 1500 },
+      { what: '金庫室（山分け前）', cost: 3000 },
+      { what: '与信の再発行（正規）', cost: 5000 },
     ],
   },
 
@@ -713,6 +757,8 @@ export const neon = {
     hitDice: '回復リソース',
     strain: '適合度',
   },
+
+  startingGold: 600,
 
   abilities: ABILITIES,
   skills: SKILLS,

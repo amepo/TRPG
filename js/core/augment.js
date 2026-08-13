@@ -35,19 +35,30 @@ export const strainOver = character =>
 
 /**
  * 改造を入れる。上限を超えても入れられるが、超過ぶんのペナルティを負う。
- * @returns {{ok:boolean, reason?:string, over?:number}}
+ *
+ * 費用はここで引く。値段が書いてあるのに払わずに済むなら、負荷と釣り合う
+ * もう一方の天秤が無いのと同じで、入れない理由が消えてしまう。
+ * @param {object} character
+ * @param {string} id
+ * @param {object} [opts] {free} — シナリオが報酬として渡す場合など
+ * @returns {{ok:boolean, reason?:string, over?:number, paid?:number}}
  */
-export function install(character, id) {
+export function install(character, id, { free = false } = {}) {
   const augment = augmentById(id);
   if (!augment) return { ok: false, reason: 'その改造は存在しません' };
   character.augments = character.augments || [];
   if (character.augments.includes(id)) return { ok: false, reason: 'すでに入っています' };
 
+  const price = free ? 0 : (augment.cost || 0);
+  if (price > (character.gold || 0)) {
+    return { ok: false, reason: `資金が足りません（${price} 必要、残り ${character.gold || 0}）` };
+  }
+  character.gold = (character.gold || 0) - price;
   character.augments.push(id);
-  return { ok: true, over: strainOver(character) };
+  return { ok: true, over: strainOver(character), paid: price };
 }
 
-/** 摘出する。負荷は戻るが、費用はふつう戻らない。 */
+/** 摘出する。負荷は戻るが、金は戻らない。取り出した義体に値はつかない。 */
 export function remove(character, id) {
   if (!character.augments?.includes(id)) return { ok: false, reason: '入っていません' };
   character.augments = character.augments.filter(a => a !== id);

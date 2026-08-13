@@ -15,7 +15,7 @@ export const lastRide = {
   level: 2,
   length: '中編（30〜45分）',
   start: 'pickup',
-  vars: { pursuit: 0, trust: 0, legs: 0 },
+  vars: { pursuit: 0, trust: 0, legs: 0, fee: 1500 },
 
   items: {
     testimony: { id: 'testimony', name: '証言記録', desc: '本人の声で四十分。裁判ではなく、報道のために録られたもの。' },
@@ -529,6 +529,7 @@ export const lastRide = {
 
     endBest: {
       id: 'endBest', title: '朝', art: '📰',
+      onEnter: [{ gold: { var: 'fee' } }],
       text: [
         '記録は三日後に出た。四年ぶんの支払先が、一社も実在しなかったという話だ。',
         '会社は否定し、否定しきれず、四人が辞めた。',
@@ -546,6 +547,8 @@ export const lastRide = {
 
     endLeverage: {
       id: 'endLeverage', title: '持っておく', art: '💾',
+      // 記録を渡していないので、依頼主は満額を払わない。
+      onEnter: [{ gold: { var: 'fee', times: 0.4 } }],
       text: [
         'レナは黙って頷いた。「……使わないでいてくれるなら」',
         '記録は誰にも渡さなかった。持っているという事実だけが、静かに効いた。',
@@ -562,6 +565,8 @@ export const lastRide = {
 
     endDaughter: {
       id: 'endDaughter', title: '約束', art: '🧸',
+      // 娘を先に逃がすぶん、届け先が変わって報酬は目減りする。
+      onEnter: [{ gold: { var: 'fee', times: 0.6 } }],
       text: [
         'レナは初めて泣いた。声を立てずに、短く。',
         '「……ありがとう」それだけ言って、車に乗った。',
@@ -579,6 +584,8 @@ export const lastRide = {
 
     endQuiet: {
       id: 'endQuiet', title: '送り出す', art: '🚙',
+      // 契約は果たした。果たしただけの額は出る。
+      onEnter: [{ gold: { var: 'fee' } }],
       text: ['もう一台の車が出ていくのを、エンジンをかけたまま見送った。'],
       ending: {
         type: 'neutral',

@@ -13,7 +13,7 @@ export const threePasses = {
   level: 2,
   length: '中編（30〜45分）',
   start: 'depot',
-  vars: { cold: 0, trust: 0, legs: 0 },
+  vars: { cold: 0, trust: 0, legs: 0, fee: 30 },
 
   items: {
     medicine: { id: 'medicine', name: '薬箱', desc: '山向こうの町で流行っている熱病の薬。冷やしても凍らせてもいけない。' },
@@ -327,6 +327,7 @@ export const threePasses = {
 
     endFull: {
       id: 'endFull', title: '間に合った', art: '🌅',
+      onEnter: [{ gold: { var: 'fee' } }],
       text: [
         '木箱が六つ、門の内側へ運ばれていく。ヤナは最後の一つを自分で抱えて入っていった。',
         '三日後、熱病の死者は出なくなった。',
@@ -335,7 +336,7 @@ export const threePasses = {
         type: 'good',
         title: '峠が閉じる前に',
         text: [
-          '報酬は満額。それとは別に、春に一度だけ、ケルンから干した果物が届いた。',
+          '報酬は満額の銀貨三十枚。それとは別に、春に一度だけ、ケルンから干した果物が届いた。',
           '差出人の名は書かれていなかったが、字は女のものだった。',
         ],
       },
@@ -343,6 +344,8 @@ export const threePasses = {
 
     endShort: {
       id: 'endShort', title: '五箱', art: '🌤️',
+      // 荷が欠けたぶんは引かれる。誰も責めなかったが、帳面は正直だ。
+      onEnter: [{ gold: { var: 'fee', times: 0.7 } }],
       text: [
         '事情は聞き入れられた。誰も責めなかった。それがかえって重かった。',
         '薬は五箱ぶんしか行き渡らず、順番は町が決めた。',
@@ -363,6 +366,7 @@ export const threePasses = {
       ending: {
         type: 'neutral',
         title: '運んだだけ',
+        noPay: true,                       // 名乗らずに発ったので、受け取る相手がいない
         text: ['薬は届いた。届けたのが誰かは、ケルンの誰も知らない。'],
       },
     },

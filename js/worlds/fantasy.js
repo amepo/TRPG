@@ -185,42 +185,42 @@ const BACKGROUNDS = [
 /* ------------------------------------------------------------------ gear */
 
 const WEAPONS = {
-  longsword: { id: 'longsword', name: 'ロングソード', damage: '1d8', type: '斬撃', ability: 'str', tags: ['近接'] },
-  shortsword: { id: 'shortsword', name: 'ショートソード', damage: '1d6', type: '刺突', ability: 'dex', tags: ['近接', '軽量'] },
-  greataxe: { id: 'greataxe', name: 'グレートアクス', damage: '1d12', type: '斬撃', ability: 'str', tags: ['近接', '両手'] },
-  mace: { id: 'mace', name: 'メイス', damage: '1d6', type: '打撃', ability: 'str', tags: ['近接'] },
-  dagger: { id: 'dagger', name: 'ダガー', damage: '1d4', type: '刺突', ability: 'dex', tags: ['近接', '軽量', '投擲'] },
-  staff: { id: 'staff', name: 'クォータースタッフ', damage: '1d6', type: '打撃', ability: 'str', tags: ['近接'] },
-  spear: { id: 'spear', name: 'スピア', damage: '1d6', type: '刺突', ability: 'str', tags: ['近接', 'リーチ'] },
-  shortbow: { id: 'shortbow', name: 'ショートボウ', damage: '1d6', type: '刺突', ability: 'dex', tags: ['遠隔'], ranged: true },
-  longbow: { id: 'longbow', name: 'ロングボウ', damage: '1d8', type: '刺突', ability: 'dex', tags: ['遠隔', '両手'], ranged: true },
-  crossbow: { id: 'crossbow', name: 'クロスボウ', damage: '1d8', type: '刺突', ability: 'dex', tags: ['遠隔'], ranged: true },
-  sling: { id: 'sling', name: 'スリング', damage: '1d4', type: '打撃', ability: 'dex', tags: ['遠隔'], ranged: true },
-  unarmed: { id: 'unarmed', name: '素手', damage: '1d2', type: '打撃', ability: 'str', tags: ['近接'] },
+  longsword: { id: 'longsword', cost: 15, name: 'ロングソード', damage: '1d8', type: '斬撃', ability: 'str', tags: ['近接'] },
+  shortsword: { id: 'shortsword', cost: 10, name: 'ショートソード', damage: '1d6', type: '刺突', ability: 'dex', tags: ['近接', '軽量'] },
+  greataxe: { id: 'greataxe', cost: 30, name: 'グレートアクス', damage: '1d12', type: '斬撃', ability: 'str', tags: ['近接', '両手'] },
+  mace: { id: 'mace', cost: 5, name: 'メイス', damage: '1d6', type: '打撃', ability: 'str', tags: ['近接'] },
+  dagger: { id: 'dagger', cost: 2, name: 'ダガー', damage: '1d4', type: '刺突', ability: 'dex', tags: ['近接', '軽量', '投擲'] },
+  staff: { id: 'staff', cost: 1, name: 'クォータースタッフ', damage: '1d6', type: '打撃', ability: 'str', tags: ['近接'] },
+  spear: { id: 'spear', cost: 1, name: 'スピア', damage: '1d6', type: '刺突', ability: 'str', tags: ['近接', 'リーチ'] },
+  shortbow: { id: 'shortbow', cost: 25, name: 'ショートボウ', damage: '1d6', type: '刺突', ability: 'dex', tags: ['遠隔'], ranged: true },
+  longbow: { id: 'longbow', cost: 50, name: 'ロングボウ', damage: '1d8', type: '刺突', ability: 'dex', tags: ['遠隔', '両手'], ranged: true },
+  crossbow: { id: 'crossbow', cost: 25, name: 'クロスボウ', damage: '1d8', type: '刺突', ability: 'dex', tags: ['遠隔'], ranged: true },
+  sling: { id: 'sling', cost: 1, name: 'スリング', damage: '1d4', type: '打撃', ability: 'dex', tags: ['遠隔'], ranged: true },
+  unarmed: { id: 'unarmed', cost: 0, name: '素手', damage: '1d2', type: '打撃', ability: 'str', tags: ['近接'] },
 };
 
 const ARMORS = {
-  leather: { id: 'leather', name: 'レザーアーマー', base: 11, maxDex: undefined, stealth: 0 },
-  studded: { id: 'studded', name: 'スタッデッドレザー', base: 12, maxDex: undefined, stealth: 0 },
-  hide: { id: 'hide', name: 'ハイドアーマー', base: 12, maxDex: 2, stealth: 0 },
-  chain: { id: 'chain', name: 'チェインシャツ', base: 13, maxDex: 2, stealth: 0 },
-  breastplate: { id: 'breastplate', name: 'ブレストプレート', base: 14, maxDex: 2, stealth: 0 },
-  plate: { id: 'plate', name: 'プレートアーマー', base: 18, maxDex: 0, stealth: -2 },
+  leather: { id: 'leather', cost: 10, name: 'レザーアーマー', base: 11, maxDex: undefined, stealth: 0 },
+  studded: { id: 'studded', cost: 45, name: 'スタッデッドレザー', base: 12, maxDex: undefined, stealth: 0 },
+  hide: { id: 'hide', cost: 10, name: 'ハイドアーマー', base: 12, maxDex: 2, stealth: 0 },
+  chain: { id: 'chain', cost: 50, name: 'チェインシャツ', base: 13, maxDex: 2, stealth: 0 },
+  breastplate: { id: 'breastplate', cost: 250, name: 'ブレストプレート', base: 14, maxDex: 2, stealth: 0 },
+  plate: { id: 'plate', cost: 600, name: 'プレートアーマー', base: 18, maxDex: 0, stealth: -2 },
 };
 
-const SHIELD = { id: 'shield', name: 'シールド', ac: 2 };
+const SHIELD = { id: 'shield', name: 'シールド', ac: 2, cost: 10 };
 
 const ITEMS = {
-  potion: { id: 'potion', name: '治癒の薬', use: 'heal', amount: '2d4+2', desc: '飲むと 2d4+2 回復する。', consumable: true },
-  greaterPotion: { id: 'greaterPotion', name: '上級治癒薬', use: 'heal', amount: '4d4+4', desc: '飲むと 4d4+4 回復する。', consumable: true },
-  antidote: { id: 'antidote', name: '解毒薬', use: 'cure', cures: ['poisoned'], desc: '毒状態を取り除く。', consumable: true },
-  bomb: { id: 'bomb', name: '発火瓶', use: 'damage', amount: '2d6', type: '火', area: true, desc: '投げつけて 2d6 の火ダメージ（範囲）。', consumable: true },
-  rope: { id: 'rope', name: '麻縄（15m）', desc: '登攀や拘束に使う。' },
-  torch: { id: 'torch', name: '松明', desc: '暗所を照らす。手が1つ塞がる。', light: true },
-  lockpicks: { id: 'lockpicks', name: '鍵開け道具', desc: '錠前を開ける判定に必要。' },
-  rations: { id: 'rations', name: '携行食（3日分）', desc: '野営に使う。' },
-  holySymbol: { id: 'holySymbol', name: '聖印', desc: '神聖呪文の焦点具。' },
-  spellbook: { id: 'spellbook', name: '呪文書', desc: '秘術呪文の焦点具。' },
+  potion: { id: 'potion', cost: 12, name: '治癒の薬', use: 'heal', amount: '2d4+2', desc: '飲むと 2d4+2 回復する。', consumable: true },
+  greaterPotion: { id: 'greaterPotion', cost: 40, name: '上級治癒薬', use: 'heal', amount: '4d4+4', desc: '飲むと 4d4+4 回復する。', consumable: true },
+  antidote: { id: 'antidote', cost: 10, name: '解毒薬', use: 'cure', cures: ['poisoned'], desc: '毒状態を取り除く。', consumable: true },
+  bomb: { id: 'bomb', cost: 8, name: '発火瓶', use: 'damage', amount: '2d6', type: '火', area: true, desc: '投げつけて 2d6 の火ダメージ（範囲）。', consumable: true },
+  rope: { id: 'rope', cost: 3, name: '麻縄（15m）', desc: '登攀や拘束に使う。' },
+  torch: { id: 'torch', cost: 1, name: '松明', desc: '暗所を照らす。手が1つ塞がる。', light: true },
+  lockpicks: { id: 'lockpicks', cost: 8, name: '鍵開け道具', desc: '錠前を開ける判定に必要。' },
+  rations: { id: 'rations', cost: 3, name: '携行食（3日分）', desc: '野営に使う。' },
+  holySymbol: { id: 'holySymbol', cost: 5, name: '聖印', desc: '神聖呪文の焦点具。' },
+  spellbook: { id: 'spellbook', cost: 25, name: '呪文書', desc: '秘術呪文の焦点具。' },
 };
 
 /* ---------------------------------------------------------------- spells */
@@ -502,26 +502,31 @@ const LORE = {
       name: '街道守備隊',
       blurb: '王が置いた常備兵。人数が足りていない。街道の見回りはするが、街道から一歩外れたことには関与しない。' +
         '「管轄外です」が口癖で、本人たちもそれを恥じている。',
+      stance: '商隊組合とは持ちつ持たれつ。灯火の兄弟団を「素人が出しゃばる」と嫌っている。',
     },
     {
       name: '灯火の兄弟団',
       blurb: '寺院に属さない巡回の司祭たち。村から村へ歩き、鐘を直し、死者を埋める。' +
         '報酬は宿と食事だけ。組織というより、同じことをしている人間の集まりに近い。',
+      stance: '寺院とは距離がある。破門された者が流れ着く先でもあるからだ。静かなる環を唯一まともに追っている。',
     },
     {
       name: '商隊組合',
       blurb: 'この地方で唯一、金と情報が集まる場所。護衛を雇う側であり、依頼を出す側でもある。' +
         '組合証があれば、どの村でも一晩は泊まれる。取り上げられると、どこにも泊まれない。',
+      stance: '守備隊に金を出して街道を維持させている。峠の隠者への通行料も、経費として黙認している。',
     },
     {
       name: '静かなる環',
       blurb: '名前を持たない教団。灰色の服。人が消える場所には、たいてい後から名前が出てくる。' +
         '信徒は自分が信徒だと思っていないことがある。それがこの教団のやり方だ。',
+      stance: 'どの勢力とも敵対しない。敵対する前に、相手の内側にいる。',
     },
     {
       name: '峠の隠者たち',
       blurb: '山に一人ずつ住んでいる者たち。互いに面識はない。追い剥ぎではないが、通行料は取る。' +
         '払えば道を教え、天気を読み、時には薬をくれる。',
+      stance: '誰にも属さない。ただし冬を越せなかった隠者の道は、翌年から誰も通れなくなる。',
     },
   ],
 
@@ -540,6 +545,49 @@ const LORE = {
       'ハルヴァ', 'ヤナ', 'ミナ', 'ドロス', 'オルグ', 'ティナ',
     ],
     family: [],
+  },
+
+
+  /* 年表。物語の背景として使う。日付より「何が変わったか」が大事なので、
+     年は現在からの逆算で書いてある。 */
+  timeline: [
+    { when: '約200年前', what: '大森林戦争。北の森を焼き払おうとして失敗し、以後この地方は森に手を出さなくなった。' },
+    { when: '約80年前', what: '王国が街道を敷く。宿場と鐘楼が同じ規格で建てられ、鐘が魔除けとして定着したのもこの頃。' },
+    { when: '約40年前', what: '大寺院の分裂。教義をめぐって割れ、片方が「灯火の兄弟団」として組織を出た。' },
+    { when: '20年前', what: '灰の街道の大火。並木が焼け、隊商が三つ焼けた。原因は今も公式には「落雷」。' },
+    { when: '11年前', what: '南の学院で事故。学生が七人死に、以後この地方で魔術を学ぶ者が激減した。' },
+    { when: '3年前', what: '人が消える事件が北から順に始まる。数は少なく、村ごとに一人か二人。まだ誰も繋げて考えていない。' },
+    { when: '今年', what: 'ヴェルナ村の鐘が鳴らなくなって三日目。' },
+  ],
+
+  /* 世界の決まりごと。「何ができないか」を先に決めておくと、シナリオも
+     プレイヤーの発想も締まる。ここは能力の一覧ではなく、物語の物理法則。 */
+  truths: [
+    { title: '灯りは境界である', text: '灯りの中は人の領分、外はそうでない。不死のものは灯りを嫌うが、灯りを消すことはできない。息を吹きかけるにも、肺が要るからだ。' },
+    { title: '鐘は本当に効く', text: '澄んだ金属音は不死のものを怯ませる。これは迷信ではなく観察された事実で、だからこそ「鐘が鳴らない」ことが恐ろしい。' },
+    { title: '魔法は稀で、高く、遅い', text: '学院は三つしかなく、卒業までに十年と借金がかかる。旅の一行に魔術師が一人いるのは、この地方では珍しいことだ。' },
+    { title: '死者は戻らない。戻ってきたものは、その人ではない', text: '蘇生の魔法は伝説の領域にある。埋葬を丁寧にするのは弔いのためであり、同時に予防でもある。' },
+    { title: '法は村ごとにある', text: '王の法は文書としては存在するが、執行するのは村長か、村長が雇った誰かだ。旅人が裁かれるとき、証人は現地の人間しかいない。' },
+    { title: '距離は日数で測る', text: '村から村へ半日から二日。地図はあるが縮尺は当てにならない。「二日」と言われたら、二晩野宿する用意をする。' },
+    { title: '冬は世界を切り分ける', text: '峠は四ヶ月閉じる。閉じているあいだ、向こう側で何が起きても手が届かない。それを知った上で、人は冬の前に急ぐ。' },
+  ],
+
+  /* 物価。数字そのものより「一日いくらで生きているか」が伝わることが大事。 */
+  economy: {
+    unit: '銀貨',
+    note: '銀貨1枚で一食。駆け出しの依頼が5枚、まともな護衛で30枚。'
+      + 'プレートアーマーが600枚なのは、買えないことに意味があるからだ。',
+    anchors: [
+      { what: '宿の相部屋（一泊、食事つき）', cost: 1 },
+      { what: '宿の個室（一泊）', cost: 3 },
+      { what: '一食', cost: 1 },
+      { what: '荷馬車を一日雇う', cost: 5 },
+      { what: '職人の日当', cost: 2 },
+      { what: '駆け出しの依頼', cost: 5 },
+      { what: '護衛の相場（片道）', cost: 20 },
+      { what: '治癒の薬', cost: 12 },
+      { what: '一年の暮らし（つましく）', cost: 400 },
+    ],
   },
 
   tables: [
@@ -665,6 +713,8 @@ export const fantasy = {
     hitDice: 'ヒットダイス',
     strain: null,          // この世界に改造はない
   },
+
+  startingGold: 25,
 
   abilities: ABILITIES,
   skills: SKILLS,

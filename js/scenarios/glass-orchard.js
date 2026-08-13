@@ -15,7 +15,7 @@ export const glassOrchard = {
   level: 2,
   length: '中編（30〜45分）',
   start: 'brief',
-  vars: { evidence: 0, heat: 0 },
+  vars: { evidence: 0, heat: 0, fee: 250 },
 
   items: {
     maintTag: { id: 'maintTag', name: '保守作業タグ', desc: '首から下げていれば、誰も顔を見ない。' },
@@ -66,7 +66,7 @@ export const glassOrchard = {
             skill: 'persuasion', dc: 12,
             success: {
               text: ['「……€$400。組合の積立てを崩します。これ以上は本当にありません」'],
-              effects: [{ setFlag: 'goodPay' }],
+              effects: [{ setFlag: 'goodPay' }, { var: 'fee', set: 400 }],
               to: 'briefAfter',
             },
             fail: { text: ['「€$250。それが全部です」——嘘をついている顔ではなかった。'], to: 'briefAfter' },
@@ -701,6 +701,7 @@ export const glassOrchard = {
 
     endUnion: {
       id: 'endUnion', title: '証拠の束', art: '📑',
+      onEnter: [{ gold: { var: 'fee' } }],
       text: [
         '女は書類と小瓶を、一つずつ確認してから箱にしまった。手が震えていた。',
         '「これで、労働審判が開けます」',
@@ -719,6 +720,7 @@ export const glassOrchard = {
 
     endPress: {
       id: 'endPress', title: '朝刊の三段', art: '📰',
+      onEnter: [{ gold: 300 }],
       text: [
         '記者は写真と数字を見て、たった一つだけ聞いた。「訴えられたとき、あなたは証言台に立ちますか」',
         '立つ、と答えた。',
@@ -737,6 +739,7 @@ export const glassOrchard = {
 
     endPayoff: {
       id: 'endPayoff', title: '本社の応接室', art: '💳',
+      onEnter: [{ gold: 4000 }],
       text: [
         '応接室は静かで、乾いていて、甘い匂いがしなかった。',
         '相手は書類の束を数えもせず引き取り、金額を提示した。交渉の余地はないという顔で。',
@@ -745,7 +748,7 @@ export const glassOrchard = {
         type: 'neutral',
         title: '買い取り価格',
         text: [
-          '€$4,000。四人ぶんではなく、黙っている期間ぶんの値段だ。',
+          '€$4,000。四人ぶんではなく、黙っている期間ぶんの値段だ。下層のひと月が €$400 の街で、十ヶ月ぶん。',
           '第9温室は今日も稼働している。夜勤の名簿には、新しい名前が三つ増えた。',
           '労組の女からの連絡は、しばらくして来なくなった。',
         ],
@@ -761,6 +764,7 @@ export const glassOrchard = {
       ending: {
         type: 'neutral',
         title: '賢い判断',
+        noPay: true,                       // 持っていたものを全部置いてきた
         text: [
           '生きて出た。持っていたものは全部、あの通路に置いてきた。',
           '三日後、労組の詰め所に行くと、鍵がかかっていた。移転の張り紙も出ていなかった。',
@@ -770,6 +774,7 @@ export const glassOrchard = {
 
     endThin: {
       id: 'endThin', title: '足りない束', art: '📄',
+      onEnter: [{ gold: 100 }],
       text: [
         '女は渡されたものを長いこと見て、それから丁寧に揃えて、机に置いた。',
         '「……ありがとうございます。使えるか、やってみます」',
@@ -791,6 +796,7 @@ export const glassOrchard = {
       ending: {
         type: 'neutral',
         title: '関わらなかった',
+        noPay: true,                       // 受け取る理由がなかった、と本文で言っている
         text: [
           '報酬は受け取らなかった。受け取る理由がなかった。',
           '半年後、同じ温室の話をまた聞いた。今度は六人だった。',

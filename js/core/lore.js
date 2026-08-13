@@ -10,7 +10,10 @@
 
 import { onWorld } from '../worlds/index.js';
 
-const EMPTY = { primer: [], places: [], factions: [], figures: [], names: { given: [], family: [] }, tables: [] };
+const EMPTY = {
+  primer: [], timeline: [], truths: [], places: [], factions: [], figures: [],
+  economy: null, names: { given: [], family: [] }, tables: [],
+};
 
 export let LORE = EMPTY;
 

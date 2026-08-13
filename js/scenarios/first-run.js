@@ -293,7 +293,7 @@ export const firstRun = {
         'ハンは €${var:fee} をその場で送金し、それから少し考えて、もう一度端末を操作した。',
         '「上乗せだ。次も頼めるか」',
       ],
-      onEnter: [{ gold: 150 }],
+      onEnter: [{ gold: { var: 'fee' } }, { gold: 150 }],
       ending: {
         type: 'good',
         title: '運び屋以上',
@@ -305,6 +305,7 @@ export const firstRun = {
     },
 
     endSafe: {
+      onEnter: [{ gold: { var: 'fee' } }],
       id: 'endSafe', title: '仕事は仕事', art: '🌧️',
       text: [
         '箱を置いて、エレベーターに乗った。22階の照明が、扉の閉まる音と一緒に落ちた。',
@@ -321,6 +322,7 @@ export const firstRun = {
     },
 
     endBad: {
+      onEnter: [{ gold: { var: 'fee' } }],
       id: 'endBad', title: '床', art: '🩸',
       text: [
         '天井の照明が、ゆっくり遠くなっていく。誰かが箱を拾い上げる音がした。',
@@ -339,6 +341,7 @@ export const firstRun = {
       ending: {
         type: 'neutral',
         title: '出直し',
+        noPay: true,                       // 荷は届かなかった。前金も返した
         text: ['報酬はなし。だが覚えたことはある。次はうまくやろう。'],
       },
     },

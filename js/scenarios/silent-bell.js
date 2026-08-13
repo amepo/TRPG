@@ -868,6 +868,7 @@ export const silentBell = {
 
     endGood: {
       id: 'endGood', title: '鐘が鳴る', art: '🔔',
+      onEnter: [{ gold: 15 }],
       text: [
         '鐘楼の印を削り落とすと、縄は嘘のようにおとなしくなった。',
         '門番の男が縄を引いた。三日ぶりの鐘の音が、村の屋根を渡っていく。礼拝堂で寝ていた二人が、同時に瞬きをした。',
@@ -885,6 +886,7 @@ export const silentBell = {
 
     endCold: {
       id: 'endCold', title: '信じない村', art: '🌫️',
+      onEnter: [{ gold: 15 }],
       text: [
         '村人たちは黙って話を聞いた。そして、誰も何も言わなかった。',
         '「ハルヴァ様は、いい方だった」——それだけが、繰り返し聞こえた。',
@@ -899,6 +901,7 @@ export const silentBell = {
 
     endQuiet: {
       id: 'endQuiet', title: '黙って去る', art: '🚶',
+      onEnter: [{ gold: 15 }],
       text: ['報酬を受け取り、何も言わずに村を出た。背後で、鐘は鳴らないままだった。'],
       ending: {
         type: 'neutral',

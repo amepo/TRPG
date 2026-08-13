@@ -192,6 +192,7 @@ export const firstJob = {
       ending: {
         type: 'neutral',
         title: '出直し',
+        noPay: true,                       // 依頼は果たせなかった。払う理由が向こうにない
         text: ['報酬はなし。だが、覚えたことはある。次はうまくやろう。'],
       },
     },

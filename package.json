@@ -11,6 +11,7 @@
     "smoke": "node tools/smoke.js",
     "playtest": "node tools/playtest.js",
     "traits": "node tools/traits-report.js",
+    "economy": "node tools/economy.js",
     "sync": "node tools/sync.js",
     "new": "node tools/new-scenario.js",
     "build": "node tools/build.js",

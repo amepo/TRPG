@@ -268,7 +268,7 @@ export const TRAITS = {
   },
   combatDrilled: { name: '戦闘訓練', kind: 'passive', passive: { hpPerLevel: 1 } },
   situationalAwareness: { name: '状況把握', kind: 'passive', passive: { initiativeBonus: 2 } },
-  credit: { name: '与信', kind: 'passive', passive: { gold: 60 } },
+  credit: { name: '与信', kind: 'passive', passive: { gold: 250 } },
 
   analytic: { name: '解析癖', kind: 'passive', passive: { skillAdvantage: ['tech'] } },
   fleetFoot: { name: '逃げ足', kind: 'passive', passive: { skillAdvantage: ['athletics'] } },

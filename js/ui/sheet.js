@@ -59,7 +59,7 @@ export function characterSheet(character, { onChange } = {}) {
     kv('移動速度', `${view.speed} m`),
     kv(label('hitDice', 'ヒットダイス'), `${view.hitDice ?? view.level} × ${view.hitDie}`),
     kv('経験点', `${view.xp || 0}`),
-    view.gold !== undefined ? kv(label('gold', '所持金'), `${view.gold} ${label('goldUnit', '枚')}`) : null,
+    view.gold !== undefined ? kv(label('gold', '所持金'), money(view.gold)) : null,
   ]);
 
   const saves = el('div', { class: 'chips' }, ABILITIES.map(a =>
@@ -107,7 +107,7 @@ export function characterSheet(character, { onChange } = {}) {
   ]) : null;
 
   const inventory = el('div', {}, (character.inventory || []).length
-    ? character.inventory.map(i => kv(`${i.name}${i.count > 1 ? ` ×${i.count}` : ''}`, i.desc ? '' : ''))
+    ? character.inventory.map(i => kv(`${i.name}${i.count > 1 ? ` ×${i.count}` : ''}`, money(i.cost)))
     : [el('p', { class: 'muted tiny', text: '何も持っていない。' })]);
 
   const conditions = character.conditions?.length
@@ -180,11 +180,23 @@ function augmentBlock(character, onChange) {
         el('span', { class: 'aug__name', text: `${installed ? '● ' : '○ '}${aug.name}` }),
         el('span', { class: 'aug__meta', text: `${aug.slot}　${aug.desc}` }),
       ]),
-      el('span', { class: 'aug__strain', text: `負荷 ${aug.strain}` }),
+      el('span', { class: 'aug__strain' }, [
+        el('span', { text: `負荷 ${aug.strain}` }),
+        // 負荷だけでなく値段も見せる。天秤が両方ないと、入れない理由が消える。
+        installed ? null : el('span', { class: 'tiny faint', style: { display: 'block' }, text: money(aug.cost) }),
+      ]),
     ]);
   });
 
   return frag(gauge, el('div', { class: 'stack', style: { marginTop: '10px', gap: '6px' } }, rows));
+}
+
+/* 通貨の書き方は世界のもの。€$1,500 と 銀貨15枚では、置き場所が違う。 */
+function money(cost) {
+  if (cost === undefined || cost === null) return '';
+  const unit = label('goldUnit', '枚');
+  const n = cost.toLocaleString('ja-JP');
+  return unit === '€$' ? `€$${n}` : `${n} ${unit}`;
 }
 
 const kv = (k, v) => el('div', { class: 'kv' }, [

@@ -135,11 +135,16 @@ export function applyEffects(effects, ctx) {
     }
 
     if (effect.gold) {
+      // 金額は変数でもよい。約束した報酬額が交渉で動くとき、地の文と
+      // 実際の入金が食い違わないようにするため。
+      const amount = typeof effect.gold === 'object'
+        ? Math.round(Number(ctx.vars?.[effect.gold.var] ?? 0) * (effect.gold.times ?? 1))
+        : effect.gold;
       const target = pickCarrier(ctx);
-      if (target) {
-        target.gold = (target.gold || 0) + effect.gold;
-        say(`${label('gold', '所持金')} ${effect.gold > 0 ? '+' : ''}${effect.gold} ${label('goldUnit', '枚')}`,
-          effect.gold > 0 ? 'good' : 'bad');
+      if (target && amount) {
+        target.gold = (target.gold || 0) + amount;
+        say(`${label('gold', '所持金')} ${amount > 0 ? '+' : ''}${amount} ${label('goldUnit', '枚')}`,
+          amount > 0 ? 'good' : 'bad');
       }
     }
 

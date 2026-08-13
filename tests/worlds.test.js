@@ -8,7 +8,7 @@ import * as rules from '../js/core/rules.js';
 import { createCharacter, pregeneratedParty, recalculate } from '../js/core/character.js';
 import { Session } from '../js/core/engine.js';
 import { Netrun, APPROACHES } from '../js/core/netrun.js';
-import { validate } from '../js/core/scenario.js';
+import { validate, applyEffects } from '../js/core/scenario.js';
 import { BUILT_IN, byId, forWorld } from '../js/scenarios/index.js';
 import { install, remove, strainCapacity, strainOver, summary, hasAugments, catalogue as augments } from '../js/core/augment.js';
 import { Rng } from '../js/core/rng.js';
@@ -145,6 +145,7 @@ test('installing an implant applies its bonus', () => {
   const pc = createCharacter({ classId: 'solo', ancestryId: 'street', backgroundId: 'ganger', skills: ['perception'] });
   const before = rules.skillMod(pc, 'perception');
 
+  pc.gold = 99999;                                 // 費用は別のテストで見る
   assert.equal(install(pc, 'opticSuite').ok, true);
   recalculate(pc);
   assert.equal(rules.skillMod(pc, 'perception'), before + 2);
@@ -157,6 +158,7 @@ test('installing an implant applies its bonus', () => {
 test('the same implant cannot be installed twice', () => {
   useWorld('neon');
   const pc = createCharacter({ classId: 'solo', ancestryId: 'street', backgroundId: 'ganger' });
+  pc.gold = 99999;
   install(pc, 'neuralPort');
   assert.equal(install(pc, 'neuralPort').ok, false);
   assert.equal(remove(pc, 'subdermalPlate').ok, false);
@@ -172,6 +174,7 @@ test('overloading the body penalises every roll', () => {
   const save = rules.saveMod(pc, 'str');
 
   // Stack implants past what this body can take.
+  pc.gold = 99999;
   for (const aug of augments()) install(pc, aug.id);
   recalculate(pc);
 
@@ -194,6 +197,7 @@ test('strain capacity grows with toughness and level', () => {
 test('an implanted weapon shows up as an attack option', () => {
   useWorld('neon');
   const pc = createCharacter({ classId: 'runner', ancestryId: 'street', backgroundId: 'ganger' });
+  pc.gold = 99999;
   install(pc, 'ripperClaws');
   recalculate(pc);
   assert.ok(pc.augmentAttacks.some(a => a.id === 'claws'));
@@ -479,4 +483,52 @@ test('読み物を持たない世界でも空の器が返る', () => {
   assert.equal(randomName(new Rng(1)), null);
   useWorld(DEFAULT_WORLD);
   WORLDS.splice(WORLDS.indexOf(bare), 1);        // 他のテストに置き土産を残さない
+});
+
+/* ------------------------------------------------------------- 経済 */
+
+test('買えるものにはすべて値段がある', () => {
+  for (const world of WORLDS) {
+    for (const [group, bag] of [['武器', world.weapons], ['防具', world.armors],
+      ['道具', world.items], ['改造', world.augments || {}]]) {
+      for (const thing of Object.values(bag)) {
+        assert.equal(typeof thing.cost, 'number', `${world.id}/${group}「${thing.name}」に値段がない`);
+      }
+    }
+    assert.equal(typeof world.startingGold, 'number', `${world.id}: 初期資金が決まっていない`);
+  }
+});
+
+test('初期資金は世界の尺度で決まる', () => {
+  useWorld('embers');
+  const knight = createCharacter({ name: '騎', classId: 'fighter', ancestryId: 'human' });
+  useWorld('neon');
+  const solo = createCharacter({ name: '傭', classId: 'solo', ancestryId: 'street' });
+  // 銀貨25枚と €$600 は、それぞれの世界で「宿に何泊できるか」が近い額。
+  assert.equal(knight.gold, 25);
+  assert.equal(solo.gold, 600);
+});
+
+test('改造は費用を取り、払えなければ入らない', () => {
+  useWorld('neon');
+  const pc = createCharacter({ name: '改', classId: 'techie', ancestryId: 'street' });
+  const port = augments().find(a => a.id === 'neuralPort');
+  pc.gold = port.cost;
+  const first = install(pc, 'neuralPort');
+  assert.equal(first.ok, true);
+  assert.equal(first.paid, port.cost);
+  assert.equal(pc.gold, 0);
+
+  const second = install(pc, 'opticSuite');
+  assert.equal(second.ok, false, '資金ゼロで入ってしまった');
+  assert.match(second.reason, /資金/);
+  assert.equal(pc.augments.includes('opticSuite'), false);
+});
+
+test('シナリオの報酬は変数で書ける', () => {
+  const ctx = { flags: new Set(), vars: { fee: 250 }, party: [{ name: '受', hp: 5, gold: 0, inventory: [] }] };
+  applyEffects([{ gold: { var: 'fee' } }], ctx);
+  assert.equal(ctx.party[0].gold, 250);
+  applyEffects([{ gold: { var: 'fee', times: 0.4 } }], ctx);
+  assert.equal(ctx.party[0].gold, 350);
 });

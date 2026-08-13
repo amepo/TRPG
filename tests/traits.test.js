@@ -89,7 +89,7 @@ test('与信は初期資金を増やす', () => {
   useWorld('neon');
   const corp = createCharacter({ name: 'D', classId: 'solo', ancestryId: 'corp' });
   const street = createCharacter({ name: 'E', classId: 'solo', ancestryId: 'street' });
-  assert.equal(corp.gold - street.gold, 60);
+  assert.equal(corp.gold - street.gold, 250);
 });
 
 test('竜鱗は火ダメージを半分にする', () => {

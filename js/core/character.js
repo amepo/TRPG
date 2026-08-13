@@ -120,7 +120,8 @@ function equipStartingGear(character, klass, background) {
   if (klass.id === 'cleric') addItem(character, ITEMS.holySymbol, 1);
   if (klass.id === 'mage') addItem(character, ITEMS.spellbook, 1);
   for (const name of background.gear || []) addItem(character, { id: `bg_${name}`, name, desc: '経歴の持ち物' }, 1);
-  character.gold = 25 + (traitPassives(character).gold || 0);
+  // 初期資金は世界のもの。銀貨25枚と €$25 は、まったく違う額だ。
+  character.gold = (activeWorld().startingGold ?? 25) + (traitPassives(character).gold || 0);
 }
 
 /* -------------------------------------------------------------- derived */
