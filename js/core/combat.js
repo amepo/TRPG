@@ -14,6 +14,9 @@ import {
   deathSave, abilityMod, proficiencyBonus,
 } from './rules.js';
 import { monsterById, sneakAttackDice, spellById, SPELLS } from './content.js';
+import {
+  traitAttackMods, traitAbsorb, traitSurvive, traitTurnStart, traitActions, auraFrom,
+} from './traits.js';
 import { attackOptions, spellOptions, useSlot, removeItem } from './character.js';
 
 let instanceCount = 0;
@@ -88,6 +91,11 @@ export class Combat {
 
   byUid(uid) { return this.combatants.find(c => (c.uid || c.id) === uid) || null; }
 
+  /* 特性フックが陣営を尋ねるための小さな窓。「味方」は自分を除いた同じ側。 */
+  sideOf(c) { return c?.side === 'party' ? this.party : this.enemies; }
+  alliesOf(c) { return this.sideOf(c).filter(x => x !== c && x.hp > 0 && !x.dead && !x.fled); }
+  foesOf(c) { return (c?.side === 'party' ? this.enemies : this.party).filter(x => x.hp > 0 && !x.dead); }
+
   /* --------------------------------------------------------------- setup */
 
   start() {
@@ -125,7 +133,7 @@ export class Combat {
       }
       const actor = this.current;
       if (!actor) break;
-      if (actor.dead || (actor.monster && actor.hp <= 0)) continue;
+      if (actor.dead || actor.fled || (actor.monster && actor.hp <= 0)) continue;
 
       // A surprised side loses its first turn.
       if (this.round === 1 && this.surprise === 'enemy' && actor.side === 'party') continue;
@@ -151,6 +159,7 @@ export class Combat {
       const blocked = actor.conditions.find(c => ['stunned', 'unconscious'].includes(c.id));
       this.say(`${actor.name}は${blocked ? conditionName(blocked.id) : '行動不能'}で動けない。`, 'muted');
     }
+    this.runTurnStartTraits(actor);
     // Marks and buffs tick down at the top of the owner's turn.
     const expired = tickConditions(actor);
     for (const id of expired) this.say(`${actor.name}の${conditionName(id)}が解けた。`, 'muted');
@@ -199,6 +208,10 @@ export class Combat {
         out.push({ kind: 'feature', id: 'channelHeal', name: '癒しの手（味方を回復）', target: 'ally' });
       }
     }
+    for (const t of traitActions(actor)) {
+      const used = actor.resources?.[t.id]?.used ?? 0;
+      if (used < (t.action.uses || 1)) out.push({ kind: 'trait', id: t.id, name: t.action.name });
+    }
     out.push({ kind: 'dodge', id: 'dodge', name: '回避に専念（次の被攻撃に不利）' });
     out.push({ kind: 'help', id: 'help', name: '味方を援護（次の攻撃に有利）', target: 'ally' });
     if (this.canFlee()) out.push({ kind: 'flee', id: 'flee', name: '逃走を試みる' });
@@ -221,6 +234,7 @@ export class Combat {
       case 'spell': return this.doSpell(actor, target, action);
       case 'item': return this.doItem(actor, target, action);
       case 'feature': return this.doFeature(actor, target, action);
+      case 'trait': return this.doTrait(actor, action);
       case 'dodge':
         addCondition(actor, 'dodging', { rounds: 1 });
         this.say(`${actor.name}は身構えた。次に受ける攻撃は不利になる。`, 'info');
@@ -251,14 +265,15 @@ export class Combat {
 
   /** One swing: to-hit, damage, riders. Shared by players and monsters. */
   resolveAttack(actor, target, attack, opts = {}) {
-    // Pack tactics stands in for "an ally is next to the target": it needs the
-    // monster to still have a companion on its feet, not merely a crowded room.
-    const packTactics = actor.monster
-      && actor.traits?.some(t => t.includes('群れ戦術'))
-      && this.livingEnemies.length > 1;
-    const advantage = opts.advantage || hasCondition(actor, 'helped') || packTactics;
-    const disadvantage = opts.disadvantage || hasCondition(target, 'dodging');
+    /* 有利・不利は三つの源から来る: 行動（援護・回避）、特性（群れ戦術・
+       光への弱さ）、そして味方のオーラ（号令）。特性の分は traits.js が持つ。 */
+    const traitMods = traitAttackMods({ self: actor, target, combat: this });
+    const rallied = auraFrom(this.alliesOf(actor), 'rally');
+    const advantage = opts.advantage || hasCondition(actor, 'helped') || traitMods.advantage || rallied;
+    const disadvantage = opts.disadvantage || hasCondition(target, 'dodging') || traitMods.disadvantage;
     removeCondition(actor, 'helped');
+    for (const note of traitMods.notes) this.say(`（${note}）`, 'muted');
+    if (rallied) this.say('（号令）', 'muted');
 
     const result = attackRoll(actor, target, attack, { rng: this.rng, advantage, disadvantage });
     this.say(result.text, result.hit ? (actor.side === 'party' ? 'good' : 'bad') : 'muted', { roll: result });
@@ -286,13 +301,19 @@ export class Combat {
       notes.push(`狩人の印 ${extra.total}`);
     }
 
-    const applied = applyDamage(target, total, dmg.type);
+    // 被弾側の特性（光学迷彩・加護）がここでダメージを書き換える。
+    const soak = traitAbsorb({ self: target, attacker: actor, amount: total, type: dmg.type, combat: this });
+    for (const note of soak.notes) this.say(note, 'muted');
+    total = soak.amount;
+
+    // 貫通する攻撃（致死設定）は、抵抗も免疫も間に入らない。
+    const applied = applyDamage(target, total, dmg.type, { pierce: traitMods.pierce });
     this.say(`→ ${target.name}に ${damageText(applied)}${notes.length ? `（${notes.join('・')}）` : ''}｜残りHP ${target.hp}/${target.maxHp}`,
       actor.side === 'party' ? 'good' : 'bad');
 
     // Riders (knocked prone, poisoned…) mean nothing to someone already down.
     if (attack.onHit && applied.dealt > 0 && target.hp > 0) this.applyRider(actor, target, attack.onHit);
-    if (applied.downed) this.announceDown(target);
+    if (applied.downed && !this.standFast(target)) this.announceDown(target);
     return result;
   }
 
@@ -303,6 +324,42 @@ export class Combat {
       addCondition(target, rider.condition, { rounds: rider.rounds ?? null });
       this.say(`${target.name}は【${conditionName(rider.condition)}】になった。`, 'bad');
     }
+  }
+
+  /* 倒れた瞬間に踏みとどまる特性（不死の頑健さ）。踏みとどまったら HP 1 で
+     立ったままにする。セーヴはルール層のものを閉じ込めて渡す。 */
+  standFast(target) {
+    const saved = traitSurvive({
+      self: target,
+      combat: this,
+      save: (ability, dc) => {
+        const st = savingThrow(target, ability, dc, { rng: this.rng });
+        this.say(st.text, st.success ? 'bad' : 'good');
+        return st;
+      },
+    });
+    if (!saved) return false;
+    target.hp = 1;
+    removeCondition(target, 'unconscious');
+    this.say(saved.text, target.side === 'party' ? 'good' : 'bad');
+    return true;
+  }
+
+  /* 手番の頭で動く特性（臆病の士気、監視ドローンの通報）。 */
+  runTurnStartTraits(actor) {
+    for (const event of traitTurnStart({ self: actor, combat: this })) {
+      if (event.text) this.say(event.text, actor.side === 'party' ? 'bad' : 'good');
+      if (event.flee) { actor.hp = 0; actor.fled = true; }
+      if (event.reinforce) {
+        const help = spawnMonster(event.reinforce, { rng: this.rng, suffix: '（増援）' });
+        help.side = actor.side;
+        this.sideOf(actor).push(help);
+        this.combatants.push(help);
+        this.order.push(help);
+        this.say(`${help.name}が現れた。`, actor.side === 'party' ? 'good' : 'bad');
+      }
+    }
+    return !actor.fled;
   }
 
   announceDown(target) {
@@ -423,6 +480,36 @@ export class Combat {
       const h = heal(on, amount.total);
       this.say(`${actor.name}は【癒しの手】を${on.name}に→ ${h.healed} 回復（${on.hp}/${on.maxHp}）${h.revived ? ' — 立ち上がった！' : ''}`, 'good');
     }
+    return this.endTurn();
+  }
+
+  /* 特性の能動効果。今のところ範囲ダメージ（竜の吐息）だけだが、
+     traits.js の action がそのまま増やせる形にしてある。 */
+  doTrait(actor, action) {
+    const spec = traitActions(actor).find(t => t.id === action.id);
+    if (!spec) return { error: '使えません' };
+    const use = spec.action;
+    actor.resources = actor.resources || {};
+    const slot = actor.resources[spec.id] || (actor.resources[spec.id] = { max: use.uses || 1, used: 0 });
+    if (slot.used >= slot.max) return { error: 'もう使えません' };
+    slot.used += 1;
+
+    this.say((use.text || '{name}は特性を使った。').replace('{name}', actor.name), 'info');
+    const dc = 8 + proficiencyBonus(actor.level || 1) + abilityMod(actor.abilities?.con ?? 10);
+    const targets = use.area ? this.livingEnemies : this.livingEnemies.slice(0, 1);
+    for (const foe of targets) {
+      const dmg = roll(use.damage || '1d6', { rng: this.rng });
+      let amount = dmg.total;
+      if (use.save) {
+        const st = savingThrow(foe, use.save, dc, { rng: this.rng });
+        this.say(st.text, st.success ? 'muted' : 'good');
+        if (st.success) amount = Math.floor(amount / 2);
+      }
+      const applied = applyDamage(foe, amount, use.type || '火');
+      this.say(`→ ${foe.name}に ${damageText(applied)}｜残りHP ${foe.hp}/${foe.maxHp}`, 'good');
+      if (applied.downed && !this.standFast(foe)) this.announceDown(foe);
+    }
+    if (this.checkEnd()) return this.finish();
     return this.endTurn();
   }
 

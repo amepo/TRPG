@@ -8,9 +8,10 @@ import { el, frag, clear, toast, openSheet, closeSheet, field, button, signed } 
 import { partyList, openCharacterSheet } from './sheet.js';
 import {
   createCharacter, pregeneratedParty, POINT_BUY_BUDGET, pointsSpent, pointCost,
-  STANDARD_ARRAY, rollAbilities, reviveCharacter,
+  STANDARD_ARRAY, rollAbilities, reviveCharacter, skillBudget,
 } from '../core/character.js';
 import { ANCESTRIES, CLASSES, BACKGROUNDS, CLASS_SPELLS, spellById, label } from '../core/content.js';
+import { traitList } from '../core/traits.js';
 import { ABILITIES, ABILITY_IDS, abilityMod, SKILLS, skillName } from '../core/rules.js';
 import { Rng } from '../core/rng.js';
 import { listCharacters, putCharacter, deleteCharacter } from '../core/store.js';
@@ -97,7 +98,7 @@ export function randomCharacter(rng = new Rng()) {
   const abilities = {};
   order.forEach((id, i) => { abilities[id] = scores[i]; });
 
-  const skills = rng.shuffle(klass.skillList).slice(0, klass.skillChoices);
+  const skills = rng.shuffle(klass.skillList).slice(0, skillBudget(klass, ancestry));
   const spells = (CLASS_SPELLS[klass.id] || []).slice(0, klass.caster ? 3 : 0);
 
   return createCharacter({
@@ -156,7 +157,8 @@ export function openBuilder(onDone) {
 
   function finish() {
     const klass = CLASSES.find(c => c.id === draft.classId);
-    if (draft.skills.length > klass.skillChoices) draft.skills = draft.skills.slice(0, klass.skillChoices);
+    const budget = skillBudget(klass, ANCESTRIES.find(a => a.id === draft.ancestryId));
+    if (draft.skills.length > budget) draft.skills = draft.skills.slice(0, budget);
     const character = createCharacter(draft);
     closeSheet();
     onDone(character);
@@ -176,7 +178,7 @@ function stepAncestry(draft, refresh) {
       el('span', { class: 'tiny faint grow', style: { textAlign: 'right' }, text: bonusText(a.bonus) }),
     ]),
     el('div', { class: 'tile__desc', text: a.blurb }),
-    el('div', { class: 'tiny faint', text: (a.traits || []).join('／') }),
+    el('div', { class: 'tiny faint', text: traitList(a).map(t => t.text).join('／') }),
   ])));
 }
 
@@ -250,7 +252,8 @@ function stepAbilities(draft, refresh) {
 function stepSkills(draft, refresh) {
   const klass = CLASSES.find(c => c.id === draft.classId);
   const background = BACKGROUNDS.find(b => b.id === draft.backgroundId);
-  const remaining = klass.skillChoices - draft.skills.length;
+  const ancestry = ANCESTRIES.find(a => a.id === draft.ancestryId);
+  const remaining = skillBudget(klass, ancestry) - draft.skills.length;
 
   const skillChips = el('div', { class: 'chips' }, klass.skillList.map(id => {
     const on = draft.skills.includes(id);

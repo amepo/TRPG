@@ -16,6 +16,7 @@ import {
   CLASS_SPELLS, spellById, PORTRAITS,
 } from './content.js';
 import { aggregate, strainUsed, strainCapacity, hasAugments } from './augment.js';
+import { traitPassives } from './traits.js';
 import { activeWorld } from '../worlds/index.js';
 
 export const POINT_BUY_BUDGET = 27;
@@ -52,9 +53,11 @@ export function createCharacter(draft = {}) {
   for (const id of ABILITY_IDS) abilities[id] = (base[id] || 10) + (ancestry.bonus?.[id] || 0);
 
   // Background skills are free; class picks come from the draft.
+  const traitGrants = traitPassives(ancestry);
   const skills = [...new Set([
     ...(background.skills || []),
     ...(ancestry.grantSkills || []),
+    ...traitGrants.grantSkills,
     ...(draft.skills || []),
   ])];
 
@@ -71,6 +74,7 @@ export function createCharacter(draft = {}) {
     skills,
     expertise: (draft.expertise || []).slice(0, klass.expertiseChoices || 0),
     saves: [...klass.saves],
+    traits: [...(ancestry.traits || [])],
     speed: ancestry.speed,
     hitDie: klass.hitDie,
     conditions: [],
@@ -98,6 +102,11 @@ export function createCharacter(draft = {}) {
 
 const pickPortrait = classId => PORTRAITS[classId] || '🎲';
 
+/** 選べる技能の数。クラスの枠に、種族の特性が足す分を乗せる。 */
+export function skillBudget(klass, ancestry) {
+  return (klass?.skillChoices || 0) + traitPassives(ancestry).extraSkills;
+}
+
 function equipStartingGear(character, klass, background) {
   if (klass.armor && ARMORS[klass.armor]) character.equipped.armor = { ...ARMORS[klass.armor] };
   if (klass.offhand === 'shield') character.equipped.shield = { ...SHIELD };
@@ -111,7 +120,7 @@ function equipStartingGear(character, klass, background) {
   if (klass.id === 'cleric') addItem(character, ITEMS.holySymbol, 1);
   if (klass.id === 'mage') addItem(character, ITEMS.spellbook, 1);
   for (const name of background.gear || []) addItem(character, { id: `bg_${name}`, name, desc: '経歴の持ち物' }, 1);
-  character.gold = 25;
+  character.gold = 25 + (traitPassives(character).gold || 0);
 }
 
 /* -------------------------------------------------------------- derived */
@@ -122,14 +131,17 @@ export function recalculate(character) {
   const ancestry = ancestryById(character.ancestryId);
   const conMod = abilityMod(character.abilities.con);
 
+  // 特性の受動効果は、装備と同じく平の数値へ畳み込んでからルール層に渡す。
+  const traits = traitPassives(character);
   // Implants first: their totals feed hit points, AC and every skill below.
-  applyAugments(character, ancestry);
+  applyAugments(character, ancestry, traits);
 
   // Level 1 takes the full hit die; later levels take its average, rounded up.
   const perLevel = Math.ceil((Number(klass.hitDie.split('d')[1]) + 1) / 2);
   character.maxHp = klass.hpBase + conMod
     + (character.level - 1) * (perLevel + conMod)
     + (ancestry.hpPerLevel || 0) * character.level
+    + (traits.hpPerLevel || 0) * character.level
     + (character.augmentHpPerLevel || 0) * character.level;
   character.maxHp = Math.max(1, character.maxHp);
   if (character.hp === undefined) character.hp = character.maxHp;
@@ -138,7 +150,8 @@ export function recalculate(character) {
   character.proficiency = proficiencyBonus(character.level);
   character.ac = armorClass(character);
   character.initiative = abilityMod(character.abilities.dex)
-    + (ancestry.initiativeBonus || 0) + (character.initiativeBonus || 0);
+    + (ancestry.initiativeBonus || 0) + (traits.initiativeBonus || 0)
+    + (character.initiativeBonus || 0);
   character.features = klass.features.filter(f => f.level <= character.level);
   character.hitDie = klass.hitDie;
 
@@ -160,15 +173,16 @@ export function recalculate(character) {
 
 /* Fold every installed implant into the plain fields the rules layer reads.
    A world without implants leaves all of these at zero, so nothing changes. */
-function applyAugments(character, ancestry) {
+function applyAugments(character, ancestry, traits = traitPassives(character)) {
   character.skillBonus = {};
   character.acBonus = 0;
   character.initiativeBonus = 0;
   character.attackMod = 0;
   character.augmentHpPerLevel = 0;
   character.augmentAttacks = [];
-  character.resistances = [...(ancestry.resistances || [])];
-  character.immunities = [...(ancestry.immunities || [])];
+  character.resistances = [...new Set([...(ancestry.resistances || []), ...traits.resistances])];
+  character.immunities = [...new Set([...(ancestry.immunities || []), ...traits.immunities])];
+  character.conditionImmunities = [...traits.conditionImmunities];
   character.strainUsed = 0;
   character.strainCapacity = 0;
   character.strainOver = 0;

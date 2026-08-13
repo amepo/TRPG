@@ -7,6 +7,7 @@ import { conditionName } from '../core/combat.js';
 import { spellById, label } from '../core/content.js';
 import { catalogue as augmentCatalogue, summary as augmentSummary, install, remove, hasAugments } from '../core/augment.js';
 import { recalculate } from '../core/character.js';
+import { traitList } from '../core/traits.js';
 
 /** One row in the party list. */
 export function partyRow(pc, { onClick, current = false } = {}) {
@@ -83,6 +84,16 @@ export function characterSheet(character, { onChange } = {}) {
       el('span', { class: 'tiny muted', style: { textAlign: 'right', maxWidth: '62%' }, text: f.desc }),
     ])));
 
+  /* 特性。描写だけのものは「（描写）」と添えて、ルールと区別できるようにする。
+     ここを曖昧にすると「書いてあるのに効かない」が積み上がる。 */
+  const traits = el('div', {}, traitList(character).map(t => el('div', { class: 'kv' }, [
+    el('span', { class: 'kv__k', text: t.text.split('：')[0] }),
+    el('span', {
+      class: 'tiny muted', style: { textAlign: 'right', maxWidth: '62%' },
+      text: `${t.text.split('：').slice(1).join('：') || t.text}${t.def?.kind === 'flavor' ? '（描写）' : ''}`,
+    }),
+  ])));
+
   const spellBlock = view.klass.caster ? el('div', {}, [
     kv(`${label('spell', '呪文')}の能力値`, abilityName(view.spellAbility)),
     kv(`${label('spell', '呪文')}セーヴDC`, view.spellDC),
@@ -114,6 +125,7 @@ export function characterSheet(character, { onChange } = {}) {
     section('攻撃', attacks),
     spellBlock ? section(label('spellPlural', '呪文'), spellBlock) : null,
     hasAugments() ? section(label('strain', '適合度'), augmentBlock(character, onChange)) : null,
+    traitList(character).length ? section('種族特性', traits) : null,
     section('クラス特徴', features),
     section('持ち物', inventory),
     character.notes ? section('メモ', el('p', { class: 'muted', text: character.notes })) : null,

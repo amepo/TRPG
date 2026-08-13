@@ -46,37 +46,54 @@ const ORIGINS = [
   {
     id: 'corp', name: '企業育ち', blurb: '塔の中で生まれた。外の雨を知らずに二十年。',
     bonus: { int: 2, cha: 1 }, speed: 9,
-    traits: ['社内語：【企業儀礼】を習得', '与信：初期資金が多い'],
+    traits: [
+      { id: 'corpSpeak', text: '社内語：【企業儀礼】を習得' },
+      { id: 'credit', text: '与信：初期資金 +60' },
+    ],
     grantSkills: ['corpo'],
   },
   {
     id: 'street', name: 'ストリート', blurb: '路地の地図が頭に入っている。名前は三つある。',
     bonus: { dex: 2, con: 1 }, speed: 9,
-    traits: ['土地勘：【街の勘】を習得', '逃げ足：追跡を振り切る判定に有利'],
+    traits: [
+      { id: 'streetSense', text: '土地勘：【街の勘】を習得' },
+      { id: 'fleetFoot', text: '逃げ足：【運動】に有利' },
+    ],
     grantSkills: ['streetwise'],
   },
   {
     id: 'nomad', name: 'ノマド', blurb: '街の外の砂と風。家族という単位で動く。',
     bonus: { con: 2, wis: 1 }, speed: 9,
-    traits: ['車上生活：【運転】を習得', '汚染耐性：毒セーヴに有利'],
+    traits: [
+      { id: 'roadLife', text: '車上生活：【運転】を習得' },
+      { id: 'toxinTolerance', text: '汚染耐性：毒セーヴに有利' },
+    ],
     grantSkills: ['drive'], keywords: ['poison-resist'],
   },
   {
     id: 'exmil', name: '元軍属', blurb: '契約は切れた。訓練は切れない。',
-    bonus: { str: 2, con: 1 }, speed: 9, hpPerLevel: 1,
-    traits: ['戦闘訓練：HP +1/レベル', '状況把握：イニシアチブに +2'],
-    initiativeBonus: 2,
+    bonus: { str: 2, con: 1 }, speed: 9,
+    traits: [
+      { id: 'combatDrilled', text: '戦闘訓練：HP +1/レベル' },
+      { id: 'situationalAwareness', text: '状況把握：イニシアチブに +2' },
+    ],
   },
   {
     id: 'academy', name: 'アカデミー崩れ', blurb: '学位の一歩手前で追い出された。理由は本人だけが知っている。',
     bonus: { int: 2, wis: 1 }, speed: 9,
-    traits: ['基礎研究：【資料】を習得', '解析癖：機械の弱点を見抜く'],
+    traits: [
+      { id: 'research', text: '基礎研究：【資料】を習得' },
+      { id: 'analytic', text: '解析癖：【技術】に有利' },
+    ],
     grantSkills: ['datalore'],
   },
   {
     id: 'synth', name: '人造', blurb: '培養槽から出て六年。書類上はまだ製品だ。',
     bonus: { con: 2, str: 1 }, speed: 9,
-    traits: ['非生物代謝：毒と病気に免疫', '規格外：修理は効くが医療は効きにくい'],
+    traits: [
+      { id: 'syntheticBody', text: '非生物代謝：毒ダメージに免疫、毒状態にならない' },
+      { id: 'nonStandard', text: '規格外：修理は効くが医療は効きにくい' },
+    ],
     immunities: ['毒'], keywords: ['synthetic'],
   },
 ];
@@ -207,7 +224,7 @@ const ITEMS = {
   bomb: { id: 'bomb', name: '焼夷グレネード', use: 'damage', amount: '2d6', type: '火', area: true, desc: '投げつけて 2d6 の火ダメージ（範囲）。', consumable: true },
   emp: { id: 'emp', name: 'EMPグレネード', use: 'damage', amount: '3d6', type: '電撃', area: true, desc: '機械系に 3d6 の電撃ダメージ（範囲）。', consumable: true },
   ropegun: { id: 'ropegun', name: 'ワイヤーガン', desc: '上階へ登る、あるいは降りる。' },
-  torch: { id: 'torch', name: 'ライトスティック', desc: '暗所を照らす。手が1つ塞がる。' },
+  torch: { id: 'torch', name: 'ライトスティック', desc: '暗所を照らす。手が1つ塞がる。', light: true },
   lockpicks: { id: 'lockpicks', name: '電子ピック', desc: '電子錠を開ける判定に必要。' },
   rations: { id: 'rations', name: '合成食（3日分）', desc: '路上生活に使う。' },
   deck: { id: 'deck', name: 'サイバーデッキ', desc: 'ネットランに必要な端末。' },
@@ -380,7 +397,8 @@ const ENEMIES = {
     abilities: { str: 14, dex: 14, con: 15, int: 10, wis: 12, cha: 10 },
     attacks: [{ name: 'アサルトライフル', bonus: 5, damage: '2d8+2', type: '実弾', ranged: true }],
     resistances: ['実弾'],
-    tactics: 'skirmish', traits: ['連携射撃：味方が隣接する相手への攻撃に有利'],
+    tactics: 'skirmish',
+    traits: [{ id: 'pack', text: '連携射撃：仲間が生きているあいだ攻撃に有利' }],
     blurb: '規格品の装甲。規格品の動き。だから強い。',
   },
   cleaner: {
@@ -391,7 +409,8 @@ const ENEMIES = {
       { name: '消音ピストル', bonus: 6, damage: '2d6+4', type: '実弾', ranged: true },
       { name: 'モノブレード', bonus: 6, damage: '1d8+4', type: '斬撃' },
     ],
-    tactics: 'skirmish', traits: ['光学迷彩：1度だけ、受けた攻撃を無効にする'],
+    tactics: 'skirmish',
+    traits: [{ id: 'cloakOnce', text: '光学迷彩：1度だけ、受けた攻撃を無効にする' }],
     blurb: '契約書に名前は載らない。載るのは結果だけだ。',
   },
   ripper: {
@@ -399,7 +418,8 @@ const ENEMIES = {
     acOverride: 13, hp: '4d8+4', hpAvg: 22, speed: 12,
     abilities: { str: 16, dex: 13, con: 13, int: 6, wis: 8, cha: 6 },
     attacks: [{ name: '暴走したクロー', bonus: 5, damage: '1d8+3', type: '斬撃' }],
-    tactics: 'brute', traits: ['痛覚遮断：恐怖に免疫'],
+    tactics: 'brute',
+    traits: [{ id: 'fearImmune', text: '痛覚遮断：恐怖状態にならない' }],
     blurb: '入れすぎた。もう自分がどこまでか分かっていない。',
   },
   cyberdog: {
@@ -407,7 +427,8 @@ const ENEMIES = {
     acOverride: 13, hp: '2d8+2', hpAvg: 11, speed: 15,
     abilities: { str: 13, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
     attacks: [{ name: '金属牙', bonus: 4, damage: '2d4+2', type: '刺突', onHit: { save: 'str', dc: 11, condition: 'prone' } }],
-    tactics: 'brute', traits: ['群れ戦術：味方が隣接する相手への攻撃に有利'],
+    tactics: 'brute',
+    traits: [{ id: 'pack', text: '群れ戦術：仲間が生きているあいだ攻撃に有利' }],
     blurb: '首輪の代わりに、うなじにポートがある。',
   },
   surveillanceDrone: {
@@ -416,7 +437,8 @@ const ENEMIES = {
     abilities: { str: 6, dex: 16, con: 10, int: 4, wis: 12, cha: 1 },
     attacks: [{ name: '警棒アーム', bonus: 4, damage: '1d6+3', type: '電撃' }],
     immunities: ['毒'], vulnerabilities: ['電撃'],
-    tactics: 'skirmish', traits: ['通報：3ラウンド生き残ると増援を呼ぶ'],
+    tactics: 'skirmish', backupId: 'secGuard',
+    traits: [{ id: 'callBackup', text: '通報：3ラウンド生き残ると警備を1人呼ぶ' }],
     blurb: 'レンズがこちらを向いたまま動かない。もう送信は終わっている。',
   },
   combatDrone: {
@@ -433,7 +455,8 @@ const ENEMIES = {
     abilities: { str: 14, dex: 10, con: 15, int: 1, wis: 10, cha: 1 },
     attacks: [{ name: '制圧射撃', bonus: 6, damage: '2d8+2', type: '実弾', ranged: true }],
     immunities: ['毒'], vulnerabilities: ['電撃'],
-    tactics: 'caster', traits: ['固定：移動できない'],
+    tactics: 'caster',
+    traits: [{ id: 'emplaced', text: '固定：移動できない' }],
     blurb: '天井の隅で、こちらを追って回っている。',
   },
   juggernaut: {
@@ -450,7 +473,8 @@ const ENEMIES = {
     abilities: { str: 1, dex: 14, con: 12, int: 14, wis: 12, cha: 1 },
     attacks: [{ name: '侵入者排除', bonus: 5, damage: '2d6', type: 'データ', ranged: true }],
     immunities: ['実弾', '斬撃', '刺突', '毒'],
-    tactics: 'caster', traits: ['電脳内のみ：現実では触れられない'],
+    tactics: 'caster',
+    traits: [{ id: 'netOnly', text: '電脳内のみ：現実では触れられない' }],
     blurb: '壁ではない。こちらを見ている。',
   },
   blackIce: {
@@ -462,7 +486,8 @@ const ENEMIES = {
       { name: '追跡パケット', bonus: 7, damage: '2d6', type: 'データ', ranged: true, onHit: { save: 'int', dc: 14, condition: 'blinded', rounds: 2 } },
     ],
     immunities: ['実弾', '斬撃', '刺突', '毒'],
-    tactics: 'caster', traits: ['致死設定：接続者の脳を直接焼く'],
+    tactics: 'caster',
+    traits: [{ id: 'lethalIce', text: '致死設定：抵抗も免疫も貫いて脳を直接焼く' }],
     blurb: '違法だ。誰も摘発しないというだけで。',
   },
   scav: {

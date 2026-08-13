@@ -444,15 +444,16 @@ export class Session extends EventTarget {
   /** A breather or a full night. Both are also offered from the UI. */
   rest(kind = 'short') {
     if (kind === 'long') {
-      for (const pc of this.party) { longRest(pc); recalculate(pc); }
+      for (const pc of this.party) { longRest(pc); pc.luckUsed = false; recalculate(pc); }
       this.say('一行は夜を明かした。傷は塞がり、呪文も戻っている。', 'system');
     } else {
       for (const pc of this.party) {
         if (pc.dead) continue;
         const result = shortRest(pc, 1, { rng: this.rng });
-        for (const feature of ['secondWind', 'channelHeal', 'surge']) {
+        for (const feature of ['secondWind', 'channelHeal', 'surge', 'dragonBreath']) {
           if (pc.resources?.[feature]) pc.resources[feature].used = 0;
         }
+        pc.luckUsed = false;
         if (result.healed) this.say(`${pc.name} は手当てで ${result.healed} 回復（${pc.hp}/${pc.maxHp}）`, 'good');
       }
       this.say('短い休憩をとった。', 'system');

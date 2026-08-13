@@ -20,6 +20,7 @@ const SHELL = [
   './js/core/rules.js',
   './js/core/scenario.js',
   './js/core/store.js',
+  './js/core/traits.js',
   './js/main.js',
   './js/scenarios/blackout.js',
   './js/scenarios/first-job.js',

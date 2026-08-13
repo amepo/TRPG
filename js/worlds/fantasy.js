@@ -42,36 +42,54 @@ const ANCESTRIES = [
   {
     id: 'human', name: '人間', blurb: '順応性が高く、どんな道でも並以上に歩ける。',
     bonus: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-    speed: 9, traits: ['多才：技能をもう1つ習得する'], extraSkills: 1,
+    speed: 9,
+    traits: [{ id: 'versatile', text: '多才：技能をもう1つ習得する' }],
   },
   {
     id: 'elf', name: 'エルフ', blurb: '森と星の民。感覚が鋭く、魅了を寄せつけない。',
     bonus: { dex: 2, wis: 1 }, speed: 10.5,
-    traits: ['鋭敏な感覚：【知覚】を習得', '妖精の血：魅了への抵抗', '夜目：暗がりでも見える'],
+    traits: [
+      { id: 'keenSenses', text: '鋭敏な感覚：【知覚】を習得' },
+      { id: 'feyBlood', text: '妖精の血：魅了に免疫、魅了へのセーヴに有利' },
+      { id: 'darkvision', text: '夜目：暗がりでも見える' },
+    ],
     grantSkills: ['perception'], keywords: ['darkvision', 'charm-resist'],
   },
   {
     id: 'dwarf', name: 'ドワーフ', blurb: '岩の下で鍛えられた頑健な工人。',
     bonus: { con: 2, str: 1 }, speed: 7.5,
-    traits: ['頑健：毒セーヴに有利、最大HP +1/レベル', '石工の目：石造建築を見抜く', '夜目'],
+    traits: [
+      { id: 'stoutFolk', text: '頑健：毒セーヴに有利、最大HP +1/レベル' },
+      { id: 'stoneCunning', text: '石工の目：【調査】に有利' },
+      { id: 'darkvision', text: '夜目：暗がりでも見える' },
+    ],
     hpPerLevel: 1, keywords: ['darkvision', 'poison-resist'],
   },
   {
     id: 'halfling', name: 'ハーフリング', blurb: '小柄で運が良い。誰よりも先に危険を嗅ぎつける。',
     bonus: { dex: 2, cha: 1 }, speed: 7.5,
-    traits: ['幸運：ナチュラル1を1度だけ振り直せる', '身軽：大型の相手の脇をすり抜ける'],
+    traits: [
+      { id: 'lucky', text: '幸運：出目1を休憩ごとに1度だけ振り直せる' },
+      { id: 'nimble', text: '身軽：【体術】に有利' },
+    ],
     keywords: ['lucky'],
   },
   {
     id: 'dragonborn', name: '竜血', blurb: '古竜の血を継ぎ、喉の奥に炎を宿す。',
     bonus: { str: 2, cha: 1 }, speed: 9,
-    traits: ['竜の吐息：範囲攻撃（休憩ごとに1回）', '竜鱗：属性への抵抗'],
+    traits: [
+      { id: 'dragonBreath', text: '竜の吐息：敵全体に2d6の火（休憩ごとに1回、反応セーヴで半減）' },
+      { id: 'dragonScales', text: '竜鱗：火ダメージ半減' },
+    ],
     keywords: ['breath-weapon'],
   },
   {
     id: 'tiefling', name: '魔筋', blurb: '遠い昔に交わった異界の血。影と炎に好かれる。',
     bonus: { cha: 2, int: 1 }, speed: 9,
-    traits: ['地獄の抵抗：火ダメージ半減', '闇の知恵：暗がりで見える'],
+    traits: [
+      { id: 'hellishResilience', text: '地獄の抵抗：火ダメージ半減' },
+      { id: 'darkvision', text: '闇の知恵：暗がりで見える' },
+    ],
     resistances: ['火'], keywords: ['darkvision'],
   },
 ];
@@ -198,7 +216,7 @@ const ITEMS = {
   antidote: { id: 'antidote', name: '解毒薬', use: 'cure', cures: ['poisoned'], desc: '毒状態を取り除く。', consumable: true },
   bomb: { id: 'bomb', name: '発火瓶', use: 'damage', amount: '2d6', type: '火', area: true, desc: '投げつけて 2d6 の火ダメージ（範囲）。', consumable: true },
   rope: { id: 'rope', name: '麻縄（15m）', desc: '登攀や拘束に使う。' },
-  torch: { id: 'torch', name: '松明', desc: '暗所を照らす。手が1つ塞がる。' },
+  torch: { id: 'torch', name: '松明', desc: '暗所を照らす。手が1つ塞がる。', light: true },
   lockpicks: { id: 'lockpicks', name: '鍵開け道具', desc: '錠前を開ける判定に必要。' },
   rations: { id: 'rations', name: '携行食（3日分）', desc: '野営に使う。' },
   holySymbol: { id: 'holySymbol', name: '聖印', desc: '神聖呪文の焦点具。' },
@@ -311,7 +329,8 @@ const MONSTERS = {
     acOverride: 15, hp: '2d6+2', hpAvg: 9, speed: 9,
     abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     attacks: [{ name: '錆びた短刀', bonus: 4, damage: '1d6+2', type: '刺突' }],
-    tactics: 'skirmish', traits: ['臆病：仲間が半減すると逃走判定'],
+    tactics: 'skirmish',
+    traits: [{ id: 'cowardly', text: '臆病：半数が倒れ、自分も傷つくと逃げ出す' }],
     blurb: '汚れた革鎧。数が揃うと途端に強気になる。',
   },
   goblinArcher: {
@@ -329,7 +348,8 @@ const MONSTERS = {
       { name: '曲刀', bonus: 4, damage: '1d6+2', type: '斬撃' },
       { name: '曲刀（連撃）', bonus: 4, damage: '1d6+2', type: '斬撃' },
     ],
-    tactics: 'brute', traits: ['号令：味方の攻撃に有利を与える'],
+    tactics: 'brute',
+    traits: [{ id: 'rally', text: '号令：この者が立っているあいだ、味方の攻撃は有利' }],
     blurb: '略奪品の胸当てを着けた、群れで一番大きな個体。',
   },
   wolf: {
@@ -337,7 +357,8 @@ const MONSTERS = {
     acOverride: 13, hp: '2d8+2', hpAvg: 11, speed: 12,
     abilities: { str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
     attacks: [{ name: '噛みつき', bonus: 4, damage: '2d4+2', type: '刺突', onHit: { save: 'str', dc: 11, condition: 'prone' } }],
-    tactics: 'brute', traits: ['群れ戦術：味方が隣接する相手への攻撃に有利'],
+    tactics: 'brute',
+    traits: [{ id: 'pack', text: '群れ戦術：仲間が生きているあいだ攻撃に有利' }],
     blurb: '痩せている。空腹は狼を大胆にする。',
   },
   direWolf: {
@@ -360,7 +381,8 @@ const MONSTERS = {
     acOverride: 8, hp: '3d8+9', hpAvg: 22, speed: 6,
     abilities: { str: 13, dex: 6, con: 16, int: 3, wis: 6, cha: 5 },
     attacks: [{ name: '殴打', bonus: 3, damage: '1d6+1', type: '打撃' }],
-    tactics: 'brute', traits: ['不死の頑健さ：0HPになったとき耐久セーヴDC10で1HP残る'],
+    tactics: 'brute',
+    traits: [{ id: 'undeadFortitude', text: '不死の頑健さ：0HPになったとき耐久セーヴDC10で1HP残る' }],
     blurb: '遅い。ただし止まらない。',
   },
   cultist: {
@@ -378,7 +400,8 @@ const MONSTERS = {
       { name: '暗黒の光条', bonus: 5, damage: '2d8', type: '死', ranged: true },
       { name: '儀式の刃', bonus: 3, damage: '1d6+1', type: '刺突' },
     ],
-    tactics: 'caster', traits: ['闇の加護：1度だけ、受けたダメージを半分にする'],
+    tactics: 'caster',
+    traits: [{ id: 'wardOnce', text: '闇の加護：1度だけ、受けたダメージを半分にする' }],
     blurb: '灯りを背にして立つと、影が人の形をしていない。',
   },
   giantSpider: {
@@ -386,7 +409,8 @@ const MONSTERS = {
     acOverride: 14, hp: '4d10+4', hpAvg: 26, speed: 9,
     abilities: { str: 14, dex: 16, con: 12, int: 2, wis: 11, cha: 4 },
     attacks: [{ name: '毒牙', bonus: 5, damage: '1d8+3', type: '毒', onHit: { save: 'con', dc: 12, condition: 'poisoned', rounds: 3 } }],
-    tactics: 'skirmish', traits: ['蜘蛛歩き：壁も天井も移動できる'],
+    tactics: 'skirmish',
+    traits: [{ id: 'spiderClimb', text: '蜘蛛歩き：壁も天井も移動できる' }],
     blurb: '天井の糸が、さっきより低い位置にある。',
   },
   bandit: {
@@ -412,7 +436,8 @@ const MONSTERS = {
     abilities: { str: 6, dex: 14, con: 13, int: 6, wis: 10, cha: 8 },
     attacks: [{ name: '力を吸う手', bonus: 4, damage: '2d6+2', type: '死' }],
     resistances: ['斬撃', '刺突'], immunities: ['毒'],
-    tactics: 'skirmish', traits: ['光への弱さ：明るい場所では攻撃に不利'],
+    tactics: 'skirmish',
+    traits: [{ id: 'lightSensitive', text: '光への弱さ：相手が灯りを持っていると攻撃に不利' }],
     blurb: '壁の染みが動いた、と思ったときにはもう近い。',
   },
   ogre: {

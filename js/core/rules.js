@@ -7,6 +7,7 @@
 
 import { roll } from './dice.js';
 import { onWorld } from '../worlds/index.js';
+import { traitPassives, canRerollOnes } from './traits.js';
 
 /* ---------------------------------------------- abilities and skills */
 
@@ -124,6 +125,16 @@ export function passive(actor, skillId) {
   return value;
 }
 
+/* 出目1を一度だけ振り直せる特性（ハーフリングの幸運など）。使い切りは
+   creature.luckUsed で持ち、休憩で戻る。振り直しは有利／不利の別を引き継ぐ。 */
+function rerollOnes(actor, result, { rng, mode, extras } = {}) {
+  if (result.natural !== 1 || actor?.luckUsed || !canRerollOnes(actor)) return result;
+  actor.luckUsed = true;
+  const again = roll(result.source, { rng, mode });
+  extras?.push('幸運：振り直し');
+  return again;
+}
+
 /* ------------------------------------------------------------------ rolls */
 
 /**
@@ -133,8 +144,9 @@ export function passive(actor, skillId) {
  */
 export function check(actor, skillId, dc, opts = {}) {
   const { rng, advantage = false, disadvantage = false, bonus = 0 } = opts;
+  const adv = advantage || traitPassives(actor).skillAdvantage.includes(skillId);
   const dis = disadvantage || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
-  const mode = resolveMode({ advantage, disadvantage: dis });
+  const mode = resolveMode({ advantage: adv, disadvantage: dis });
 
   let mod = skillMod(actor, skillId) + bonus;
   const extras = [];
@@ -144,7 +156,8 @@ export function check(actor, skillId, dc, opts = {}) {
     extras.push(`導き +${guide.total}`);
   }
 
-  const r = roll(`1d20${mod < 0 ? '-' : '+'}${Math.abs(mod)}`, { rng, mode });
+  let r = roll(`1d20${mod < 0 ? '-' : '+'}${Math.abs(mod)}`, { rng, mode });
+  r = rerollOnes(actor, r, { rng, mode, extras });
   const natural = r.natural;
   const total = r.total;
   return {
@@ -165,13 +178,17 @@ export function check(actor, skillId, dc, opts = {}) {
 
 /** Saving throw — same maths, different label. */
 export function savingThrow(actor, ability, dc, opts = {}) {
-  const { rng, advantage = false, disadvantage = false, bonus = 0 } = opts;
+  const { rng, advantage = false, disadvantage = false, bonus = 0, vs = null } = opts;
+  // `vs` names what the save is against (毒、魅了…) so a trait can grant an
+  // edge against that specific thing rather than against every save.
+  const adv = advantage || (vs && traitPassives(actor).saveAdvantageVs.includes(vs));
   const dis = disadvantage || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
-  const mode = resolveMode({ advantage, disadvantage: dis });
+  const mode = resolveMode({ advantage: adv, disadvantage: dis });
   let mod = saveMod(actor, ability) + bonus;
   if (hasCondition(actor, 'blessed')) mod += roll('1d4', { rng }).total;
 
-  const r = roll(`1d20${mod < 0 ? '-' : '+'}${Math.abs(mod)}`, { rng, mode });
+  let r = roll(`1d20${mod < 0 ? '-' : '+'}${Math.abs(mod)}`, { rng, mode });
+  r = rerollOnes(actor, r, { rng, mode });
   return {
     kind: 'save',
     actor: actor.name,
@@ -203,7 +220,8 @@ export function attackRoll(attacker, target, attack, opts = {}) {
   let mod = attackBonus(attacker, attack);
   if (hasCondition(attacker, 'blessed')) mod += roll('1d4', { rng }).total;
 
-  const r = roll(`1d20${mod < 0 ? '-' : '+'}${Math.abs(mod)}`, { rng, mode });
+  let r = roll(`1d20${mod < 0 ? '-' : '+'}${Math.abs(mod)}`, { rng, mode });
+  r = rerollOnes(attacker, r, { rng, mode });
   const ac = armorClass(target);
   const crit = r.natural === 20;
   const fumble = r.natural === 1;
@@ -274,12 +292,15 @@ export function armorClass(creature) {
 }
 
 /** Apply damage, honouring temporary hit points and resistances. */
-export function applyDamage(creature, amount, type = '物理') {
+export function applyDamage(creature, amount, type = '物理', { pierce = false } = {}) {
   let remaining = Math.max(0, Math.round(amount));
   const before = creature.hp;
 
-  if (creature.resistances?.includes(type)) remaining = Math.floor(remaining / 2);
-  if (creature.immunities?.includes(type)) remaining = 0;
+  // `pierce` は抵抗・免疫を素通りする攻撃（電脳を焼く防壁など）。
+  if (!pierce) {
+    if (creature.resistances?.includes(type)) remaining = Math.floor(remaining / 2);
+    if (creature.immunities?.includes(type)) remaining = 0;
+  }
   if (creature.vulnerabilities?.includes(type)) remaining *= 2;
 
   // `dealt` is what got past resistances; `hpLost` is what actually came off
@@ -345,6 +366,10 @@ export function deathSave(creature, { rng } = {}) {
 /* ----------------------------------------------------------- conditions */
 
 export function addCondition(creature, id, { rounds = null, dc = null, save = null } = {}) {
+  // 特性で免疫を持っているなら、そもそも付かない。
+  const immune = creature.conditionImmunities?.includes(id)
+    || traitPassives(creature).conditionImmunities.includes(id);
+  if (immune) return null;
   creature.conditions = creature.conditions || [];
   const existing = creature.conditions.find(c => c.id === id);
   if (existing) {
