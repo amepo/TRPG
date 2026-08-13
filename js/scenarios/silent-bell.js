@@ -205,6 +205,16 @@ export const silentBell = {
           lockedText: '儀式について、まだ何も知らない',
           to: 'forest',
         },
+        {
+          // 何も掴めなくても村を出られる道。これが無いと広場から出られなくなる。
+          text: '何も分からないまま、北の森へ入ってみる',
+          if: { all: [{ noFlag: 'knowsRitual' }, { noFlag: 'sawTracks' }] },
+          effects: [
+            { var: 'time', add: 1 },
+            { log: '当てもなく森へ入った。日が傾くのが、思ったより早い。', kind: 'bad' },
+          ],
+          to: 'forest',
+        },
       ],
     },
 
@@ -518,7 +528,7 @@ export const silentBell = {
           },
         },
         { text: 'まっすぐ入口へ向かう', to: 'entrance' },
-        { text: '村へ引き返す', to: 'square' },
+        { text: '村へ引き返す', once: true, to: 'square' },
       ],
     },
 

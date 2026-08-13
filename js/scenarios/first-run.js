@@ -221,6 +221,29 @@ export const firstRun = {
           to: 'endSafe',
         },
         {
+          // 好奇心で身を滅ぼす道。負け戦以外にも結末が要る。
+          text: '渡す前に、箱の中身を確かめる',
+          once: true,
+          check: {
+            skill: 'sleight', dc: 14,
+            success: {
+              text: [
+                '封を傷めずに開けた。中身は培養液に浮いた眼球が二つ。番号が振ってある。',
+                '閉じ直したとき、手前の男と目が合った。「……見たのか」',
+              ],
+              effects: [{ setFlag: 'sawInsideBox' }],
+              to: 'rescueFight',
+            },
+            fail: {
+              text: [
+                '封が裂けた。中身が床に転がる。培養液に浮いた眼球が二つ。番号が振ってある。',
+                '「見たな」——手前の男の声から、抑揚が消えた。',
+              ],
+              to: 'endBad',
+            },
+          },
+        },
+        {
           text: '「受取人はハンだ」と言い張る',
           check: {
             skill: 'intimidation', dc: 13,
@@ -299,7 +322,10 @@ export const firstRun = {
 
     endBad: {
       id: 'endBad', title: '床', art: '🩸',
-      text: ['天井の照明が、ゆっくり遠くなっていく。誰かが箱を拾い上げる音がした。'],
+      text: [
+        '天井の照明が、ゆっくり遠くなっていく。誰かが箱を拾い上げる音がした。',
+        'この街では、中身を知らないことが報酬の一部だった。',
+      ],
       ending: {
         type: 'bad',
         title: '初日',

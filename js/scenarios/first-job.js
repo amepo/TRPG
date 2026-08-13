@@ -124,16 +124,32 @@ export const firstJob = {
             success: {
               text: ['袋の中身は、前の持ち主の隠し金だった。銀貨が十二枚と、治癒の薬が一本。'],
               effects: [{ gold: 12 }, { giveItem: 'potion' }],
-              to: 'endGood',
+              to: 'tell',
             },
             fail: {
               text: ['手が滑って落ちた。袋は取れたが、背中を打った。'],
               effects: [{ damage: '1d4', target: 'active', type: '打撃' }, { gold: 12 }],
-              to: 'endGood',
+              to: 'tell',
             },
           },
         },
         { text: '放っておいて依頼主のところへ戻る', to: 'endGood' },
+      ],
+    },
+
+    tell: {
+      id: 'tell', title: '帰り道', art: '🌇',
+      text: [
+        '袋の重みが、歩くたびに腰に当たる。',
+        '依頼主は納屋の中身までは知らない。言わなければ、それで終わる話だ。',
+      ],
+      choices: [
+        { text: '隠し金のことも正直に話す', to: 'endGood' },
+        {
+          text: '黙っておく',
+          effects: [{ setFlag: 'keptSilent' }],
+          to: 'endKeep',
+        },
       ],
     },
 
@@ -150,6 +166,22 @@ export const firstJob = {
         text: [
           '報酬 銀貨{var:pay}枚。腕試しとしては上出来だ。',
           '——基本は以上。次は「鐘の鳴らない村」で、本物の依頼を受けてみよう。',
+        ],
+      },
+    },
+
+    endKeep: {
+      id: 'endKeep', title: '黙っていた', art: '🪙',
+      text: [
+        '銀貨{var:pay}枚を受け取り、袋のことは言わずに店を出た。',
+        '依頼主は最後まで機嫌がよかった。それが少しだけ、後ろめたい。',
+      ],
+      ending: {
+        type: 'neutral',
+        title: '言わなかったこと',
+        text: [
+          '報酬 銀貨{var:pay}枚と、誰も知らない銀貨十二枚。',
+          '——嘘はついていない。訊かれなかっただけだ。この街ではそれで通る。',
         ],
       },
     },

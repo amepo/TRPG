@@ -39,12 +39,12 @@ export const rainCheck = {
       acOverride: 16, hp: '7d8+14', hpAvg: 45, speed: 9,
       abilities: { str: 14, dex: 14, con: 15, int: 16, wis: 14, cha: 13 },
       attacks: [
-        { name: '企業支給の拳銃', bonus: 6, damage: '2d6+3', type: '実弾', ranged: true },
-        { name: '強化義手', bonus: 6, damage: '1d8+4', type: '打撃' },
+        { name: '企業支給の拳銃', bonus: 5, damage: '1d8+3', type: '実弾', ranged: true },
+        { name: '強化義手', bonus: 5, damage: '1d6+3', type: '打撃' },
       ],
       resistances: ['実弾'],
       tactics: 'caster',
-      traits: ['非常時プロトコル：HPが半分を切ると警備を1体呼ぶ'],
+      traits: ['二十年ぶんの疲れ：長引くほど手元が狂う'],
       blurb: '疲れた顔をしている。二十年、この階で同じ仕事をしてきた顔だ。',
     },
   },
@@ -125,6 +125,16 @@ export const rainCheck = {
           text: 'タワーへ向かう',
           requires: { any: [{ flag: 'knowsFloor' }, { var: 'cred', gte: 2 }] },
           lockedText: 'まだ、どこを探せばいいのか分かっていない',
+          to: 'towerApproach',
+        },
+        {
+          // 手がかりが無くても進める道。無いとハブから出られなくなる。
+          text: '手がかりがなくても、タワーの前まで行ってみる',
+          if: { all: [{ noFlag: 'knowsFloor' }, { var: 'cred', lte: 1 }] },
+          effects: [
+            { var: 'heat', add: 1 },
+            { log: '当てもないまま北へ歩いた。時間だけが企業の側に積み上がっていく。', kind: 'bad' },
+          ],
           to: 'towerApproach',
         },
       ],
@@ -622,6 +632,14 @@ export const rainCheck = {
           effects: [{ setFlag: 'ambushKessler' }],
           to: 'floor37',
         },
+        {
+          // 37階まで行かずに引き返す道。持ち帰るのは記録だけになる。
+          text: 'これ以上は危険だ。証拠だけ持って引き返す',
+          requires: { flag: 'gotFiles' },
+          lockedText: '持ち帰れる証拠がない',
+          effects: [{ log: '梯子を降りた。あの階に何があるのかは、記録の中にしかない。', kind: 'system' }],
+          to: 'aftermath',
+        },
       ],
     },
 
@@ -773,7 +791,7 @@ export const rainCheck = {
       text: ['保管槽の青い光の中で、影が二つに割れた。'],
       combat: {
         title: 'ケスラー主任',
-        enemies: ['kessler', 'corpTrooper'],
+        enemies: ['kessler'],
         onVictory: {
           text: [
             'ケスラーは槽にもたれて座り込んだ。手に握っていたのは端末だけだった。',
@@ -857,7 +875,7 @@ export const rainCheck = {
       text: ['光学迷彩の輪郭が、雨に濡れた窓の反射でだけ見えた。掃除屋だ。'],
       combat: {
         title: '掃除屋',
-        enemies: ['cleaner'],
+        enemies: ['corpTrooper'],
         onVictory: {
           text: ['迷彩が切れ、ただのスーツの人間が倒れていた。名札はない。'],
           to: 'aftermath',

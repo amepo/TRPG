@@ -34,10 +34,16 @@ const BOTS = {
   thoughtful: {
     name: '熟考',
     choose: (choices, session, rng) => {
-      // まだ見ていない場面へ進む手を優先する。物語を前に進めたい人の動き。
+      /* まだ見ていない場面へ進む手を優先する。判定つきの選択肢は行き先が
+         check.success/fail の下にあるので、そこも見ないと「行き先なし」と
+         誤判定して判定を一切選ばなくなる。 */
+      const destinations = choice => [
+        choice?.to, choice?.check?.success?.to, choice?.check?.fail?.to,
+      ].filter(Boolean);
       const fresh = choices.filter(c => {
-        const target = session.node?.choices?.[c.index]?.to;
-        return target && !session.visited.has(target);
+        const raw = session.node?.choices?.[c.index];
+        const targets = destinations(raw);
+        return targets.length && targets.some(t => !session.visited.has(t));
       });
       const pool = fresh.length ? fresh : choices;
 

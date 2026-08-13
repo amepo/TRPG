@@ -15,7 +15,7 @@ export const lastRide = {
   level: 2,
   length: '中編（30〜45分）',
   start: 'pickup',
-  vars: { pursuit: 0, trust: 0 },
+  vars: { pursuit: 0, trust: 0, legs: 0 },
 
   items: {
     testimony: { id: 'testimony', name: '証言記録', desc: '本人の声で四十分。裁判ではなく、報道のために録られたもの。' },
@@ -123,7 +123,7 @@ export const lastRide = {
             skill: 'drive', dc: 12,
             success: {
               text: ['大型トラックの陰に入り、そのまま二区画。カメラは車体の側面しか撮っていない。'],
-              to: 'checkpoint',
+              to: 'waypoint',
             },
             fail: { text: ['車間が空いた。後方の照明が、一台だけ同じ速度で追ってくる。'], effects: [{ var: 'pursuit', add: 1 }], to: 'chase' },
           },
@@ -136,7 +136,7 @@ export const lastRide = {
             success: {
               text: ['料金所の記録に、こちらの車体だけが写らない三十秒を作った。'],
               effects: [{ var: 'pursuit', add: -1 }],
-              to: 'checkpoint',
+              to: 'waypoint',
             },
             fail: { text: ['系統が新しい。触った痕跡だけが残った。'], effects: [{ var: 'pursuit', add: 1 }], to: 'chase' },
           },
@@ -160,7 +160,7 @@ export const lastRide = {
             success: {
               text: ['札を渡すと、バイクが一台ぶんだけ退いた。「あんた、追われてるな。北はやめとけ」'],
               effects: [{ setFlag: 'gangTip' }],
-              to: 'checkpoint',
+              to: 'waypoint',
             },
             fail: { text: ['金額が足りないと言われた。話が終わる前に、後ろの一人が窓に手をかけた。'], to: 'gangFight' },
           },
@@ -172,7 +172,7 @@ export const lastRide = {
             success: {
               text: ['バイクの間を、ミラーを一つ犠牲にして抜けた。背後で怒鳴り声。'],
               effects: [{ var: 'pursuit', add: 1 }],
-              to: 'checkpoint',
+              to: 'waypoint',
             },
             fail: { text: ['一台に引っかけた。車体が滑って、止まった。'], to: 'gangFight' },
           },
@@ -190,10 +190,10 @@ export const lastRide = {
         onVictory: {
           text: ['三人が路上に残った。車は動く。それで十分だ。'],
           effects: [{ var: 'pursuit', add: 1 }],
-          to: 'checkpoint',
+          to: 'waypoint',
         },
         onDefeat: { to: 'endTaken' },
-        onFlee: { text: ['アクセルを踏み込んだ。何かを踏んだ感触があった。'], effects: [{ var: 'pursuit', add: 1 }], to: 'checkpoint' },
+        onFlee: { text: ['アクセルを踏み込んだ。何かを踏んだ感触があった。'], effects: [{ var: 'pursuit', add: 1 }], to: 'waypoint' },
       },
     },
 
@@ -213,7 +213,7 @@ export const lastRide = {
                 '前方の路面が不自然に平らだ。掘り返して埋め戻した跡——スパイクだ。',
                 '手前で停めて、外して、また走った。三分の損。追跡には気づかれていない。',
               ],
-              to: 'checkpoint',
+              to: 'waypoint',
             },
             fail: {
               text: ['前輪が破裂した。車体が斜めに滑って、廃屋の壁で止まった。'],
@@ -227,7 +227,7 @@ export const lastRide = {
           effects: [{ var: 'pursuit', add: -1 }],
           check: {
             skill: 'drive', dc: 14,
-            success: { text: ['砂利を跳ね上げながら、廃線跡を走り抜けた。追跡は完全に振り切った。'], to: 'checkpoint' },
+            success: { text: ['砂利を跳ね上げながら、廃線跡を走り抜けた。追跡は完全に振り切った。'], to: 'waypoint' },
             fail: { text: ['何かを踏んだ。タイヤが鳴って、車が止まった。'], effects: [{ var: 'pursuit', add: 2 }], to: 'ambush' },
           },
         },
@@ -307,7 +307,7 @@ export const lastRide = {
       text: ['前方の信号が、青のまま点滅している。'],
       choices: [
         { text: 'もう少し話す', to: 'talk' },
-        { text: '検問へ向かう', to: 'checkpoint' },
+        { text: '検問へ向かう', to: 'waypoint' },
       ],
     },
 
@@ -324,7 +324,7 @@ export const lastRide = {
             success: {
               text: ['出口を二つ飛ばし、側道へ落とした。追跡灯が高架の上を通り過ぎていく。'],
               effects: [{ var: 'pursuit', add: -1 }],
-              to: 'checkpoint',
+              to: 'waypoint',
             },
             fail: { text: ['タイヤが滑った。相手が横に並んだ。'], to: 'chaseFight' },
           },
@@ -352,11 +352,41 @@ export const lastRide = {
         onVictory: {
           text: ['相手の車が中央分離帯に乗り上げ、視界から消えた。'],
           effects: [{ var: 'pursuit', add: 1 }],
-          to: 'checkpoint',
+          to: 'waypoint',
         },
         onDefeat: { to: 'endTaken' },
         onFlee: { text: ['出口へ滑り込んだ。追跡は続いている。'], effects: [{ var: 'pursuit', add: 2 }], to: 'checkpoint' },
       },
+    },
+
+    waypoint: {
+      id: 'waypoint', title: '路肩で一度止まる', art: '🚙',
+      text: [
+        'エンジンを切ると、雨の音だけになった。市境までは、まだ一区間ある。',
+        '追われている以上、同じ道を走り続けるのが正解とは限らない。',
+      ],
+      onEnter: [{ var: 'legs', add: 1 }],
+      repeatEffects: true,
+      choices: [
+        {
+          text: '次の区間へ——別の道に乗り換える',
+          if: { var: 'legs', lte: 1 },
+          effects: [{ log: 'ここまでの轍を捨て、別の経路に乗り換えた。', kind: 'system' }],
+          to: 'route',
+        },
+        {
+          text: '車内で話す',
+          if: { noFlag: 'talkedOnce' },
+          effects: [{ setFlag: 'talkedOnce' }],
+          to: 'talk',
+        },
+        {
+          text: 'このまま市境の検問へ',
+          requires: { var: 'legs', gte: 2 },
+          lockedText: '市境まではまだ一区間ある',
+          to: 'checkpoint',
+        },
+      ],
     },
 
     checkpoint: {
@@ -408,8 +438,7 @@ export const lastRide = {
       text: ['黒い車のドアが、四枚同時に開いた。'],
       combat: {
         title: '市境の掃除屋',
-        enemies: ['cleaner', 'corpTrooper'],
-        surprise: 'enemy',
+        enemies: ['cleaner'],
         onVictory: {
           text: ['バーを折って外へ出た。背後で警報が鳴っている。もう関係ない。'],
           effects: [{ var: 'pursuit', add: 1 }],
@@ -457,7 +486,7 @@ export const lastRide = {
       text: ['夜明け前のいちばん暗い時間に、ヘッドライトが三対。'],
       combat: {
         title: '最後の追跡',
-        enemies: ['cleaner', 'interceptor', 'interceptor'],
+        enemies: ['interceptor', 'interceptor'],
         onVictory: {
           text: ['朝日が出るころには、路肩に三台の車と、動かない人間が残っていた。'],
           to: 'handoff',
