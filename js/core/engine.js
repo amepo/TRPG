@@ -127,9 +127,14 @@ export class Session extends EventTarget {
     if (node.onEnter && (firstVisit || node.repeatEffects)) applyEffects(node.onEnter, this.ctx());
     if (node.rest) this.rest(node.rest);
 
+    if (node.ending) return this.finish(node.ending);
+    /* 全員が立てないまま次の場面へ入ってしまったら、そこで物語は終わる。
+       これが無いと、勝てない戦闘の間を永久に往復できてしまう。 */
+    if (this.wiped) {
+      return this.finish({ type: 'bad', title: '力尽きる', text: '誰も立ち上がれなかった。物語はここで途切れる。' });
+    }
     if (node.combat) return this.beginCombat(node.combat);
     if (node.netrun) return this.beginNetrun(node.netrun);
-    if (node.ending) return this.finish(node.ending);
     if (node.next && !node.choices?.length) return this.goto(node.next);
 
     this.emit('change');
@@ -275,6 +280,21 @@ export class Session extends EventTarget {
     return this.view();
   }
 
+  /* 倒れている（死んではいない）仲間を HP 1 で立たせる。全員が死んでいて
+     誰も立たせられなければ false — そのときは物語を続けようがない。 */
+  reviveDowned() {
+    const revivable = this.party.filter(pc => !pc.dead && pc.hp <= 0);
+    if (!revivable.length) return this.living.length > 0;
+    for (const pc of revivable) {
+      pc.hp = 1;
+      pc.deathSaves = { success: 0, fail: 0 };
+      pc.stable = false;
+      pc.conditions = (pc.conditions || []).filter(c => c !== 'down' && c !== 'unconscious');
+    }
+    this.say(`${revivable.map(p => p.name).join('・')} は息を吹き返した（HP 1）。`, 'good');
+    return true;
+  }
+
   /** Called when neither side has anyone left standing, or the party fled. */
   endCombat(step) {
     const spec = this.combatSpec || {};
@@ -288,9 +308,16 @@ export class Session extends EventTarget {
       if (spec.onVictory?.text) for (const p of [].concat(spec.onVictory.text)) this.say(interpolate(p, this.ctx()), 'narration');
       if (spec.onVictory?.to) return this.goto(spec.onVictory.to);
     } else if (result === 'defeat') {
+      /* 敗北の続きが書かれているなら、それは「殺されなかった」という意味だ。
+         倒れただけの仲間は立たせて送り出す。これを忘れると HP 0 のまま次の
+         場面へ進み、以後どの戦闘にも勝てないまま延々と往復することになる。 */
+      if (spec.onDefeat?.to && this.reviveDowned()) {
+        if (spec.onDefeat.effects) applyEffects(spec.onDefeat.effects, this.ctx());
+        if (spec.onDefeat.text) for (const p of [].concat(spec.onDefeat.text)) this.say(interpolate(p, this.ctx()), 'narration');
+        return this.goto(spec.onDefeat.to);
+      }
       if (spec.onDefeat?.effects) applyEffects(spec.onDefeat.effects, this.ctx());
       if (spec.onDefeat?.text) for (const p of [].concat(spec.onDefeat.text)) this.say(interpolate(p, this.ctx()), 'narration');
-      if (spec.onDefeat?.to) return this.goto(spec.onDefeat.to);
       return this.finish({ type: 'bad', title: '全滅', text: '一行はここで倒れた。物語は誰にも語られない。' });
     } else if (result === 'fled') {
       if (spec.onFlee?.effects) applyEffects(spec.onFlee.effects, this.ctx());

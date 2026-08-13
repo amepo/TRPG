@@ -88,6 +88,16 @@ test('giveItem and takeItem move things in and out of the party', () => {
   assert.equal(party[0].inventory.length, 0);
 });
 
+test('an effect can carry its own condition', () => {
+  const c = ctx({ vars: { heat: 1 }, flags: new Set() });
+  applyEffects([
+    { if: { var: 'heat', gte: 3 }, setFlag: 'spotted' },
+    { if: { var: 'heat', lte: 2 }, setFlag: 'quiet' },
+  ], c);
+  assert.equal(c.flags.has('spotted'), false);
+  assert.equal(c.flags.has('quiet'), true);
+});
+
 test('gold and log effects run through the context hooks', () => {
   const lines = [];
   const party = [{ name: '会計', hp: 5, gold: 10, inventory: [] }];
@@ -245,6 +255,42 @@ test('reaching an ending finishes the session', () => {
   assert.equal(session.finished, true);
   assert.equal(session.ending.type, 'good');
   assert.equal(session.view().choices.length, 0);
+});
+
+/* 敗北の続きが書かれた戦闘は「殺されなかった」場面だ。倒れたまま次の場面へ
+   送り出すと、以後どの戦闘にも勝てず、詰みに気づけないまま往復してしまう。 */
+const defeatedSession = ({ dead = false } = {}) => {
+  const session = new Session({ scenario: tinyScenario, party: pregeneratedParty(), seed: 7 });
+  session.start();
+  for (const pc of session.party) { pc.hp = 0; pc.dead = dead; }
+  session.combat = {};
+  session.combatSpec = { onDefeat: { to: 'a' } };
+  return session;
+};
+
+test('a defeat that continues stands the fallen back up', () => {
+  const session = defeatedSession();
+  session.endCombat({ result: 'defeat' });
+  assert.equal(session.nodeId, 'a');
+  assert.equal(session.finished, false);
+  assert.equal(session.living.length, session.party.length);
+  assert.ok(session.party.every(pc => pc.hp === 1));
+});
+
+test('a defeat nobody survives ends the story even when a next scene is written', () => {
+  const session = defeatedSession({ dead: true });
+  session.endCombat({ result: 'defeat' });
+  assert.equal(session.finished, true);
+  assert.equal(session.ending.type, 'bad');
+});
+
+test('entering a scene with nobody standing ends the story instead of looping', () => {
+  const session = new Session({ scenario: tinyScenario, party: pregeneratedParty(), seed: 1 });
+  session.start();
+  for (const pc of session.party) pc.hp = 0;
+  session.goto('a');
+  assert.equal(session.finished, true);
+  assert.equal(session.ending.type, 'bad');
 });
 
 test('the session save round-trips through JSON', () => {

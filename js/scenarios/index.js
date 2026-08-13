@@ -5,14 +5,17 @@
 
 import { firstJob } from './first-job.js';
 import { silentBell } from './silent-bell.js';
+import { threePasses } from './three-passes.js';
+import { tideAndBone } from './tide-and-bone.js';
 import { firstRun } from './first-run.js';
 import { blackout } from './blackout.js';
+import { glassOrchard } from './glass-orchard.js';
 import { lastRide } from './last-ride.js';
 import { rainCheck } from './rain-check.js';
 import { describe } from '../core/scenario.js';
 import { worldById, DEFAULT_WORLD } from '../worlds/index.js';
 
-export const BUILT_IN = [firstJob, silentBell, firstRun, blackout, lastRide, rainCheck];
+export const BUILT_IN = [firstJob, silentBell, threePasses, tideAndBone, firstRun, blackout, glassOrchard, lastRide, rainCheck];
 
 export const byId = id => BUILT_IN.find(s => s.id === id) || null;
 

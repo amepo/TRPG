@@ -101,6 +101,8 @@ export function applyEffects(effects, ctx) {
 
   for (const effect of [].concat(effects || [])) {
     if (!effect) continue;
+    // `if:` gates a single effect, so a conditional line doesn't need its own node.
+    if (effect.if && !testCondition(effect.if, ctx)) continue;
 
     if (effect.setFlag) { setFlag(ctx, effect.setFlag, true); if (effect.note) say(effect.note); }
     if (effect.clearFlag) setFlag(ctx, effect.clearFlag, false);
