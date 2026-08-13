@@ -10,8 +10,15 @@ import { BUILT_IN, byId, catalogue } from '../js/scenarios/index.js';
 import { MONSTERS, ITEMS } from '../js/core/content.js';
 import { Rng } from '../js/core/rng.js';
 import { pregeneratedParty, createCharacter } from '../js/core/character.js';
+import { useWorld, DEFAULT_WORLD } from '../js/worlds/index.js';
+
+/* A scenario is only meaningful inside its own setting — monster ids and skill
+   ids resolve against the active world. */
+const inWorld = scenario => useWorld(scenario.world || DEFAULT_WORLD);
 
 const ctx = (over = {}) => ({ flags: new Set(), vars: {}, party: [], visited: new Set(), ...over });
+
+test.beforeEach(() => useWorld(DEFAULT_WORLD));
 
 /* ------------------------------------------------------------- conditions */
 
@@ -141,17 +148,21 @@ test('validation warns about unreachable nodes', () => {
 
 test('every shipped scenario is valid', () => {
   for (const scenario of BUILT_IN) {
+    inWorld(scenario);
     const result = validate(scenario, { monsters: MONSTERS });
     assert.equal(result.ok, true, `${scenario.id}:\n${result.errors.join('\n')}`);
   }
+  useWorld(DEFAULT_WORLD);
 });
 
 test('shipped scenarios have no dead-end warnings that matter', () => {
   for (const scenario of BUILT_IN) {
+    inWorld(scenario);
     const { warnings } = validate(scenario, { monsters: MONSTERS });
     const deadEnds = warnings.filter(w => w.includes('行き止まり'));
     assert.deepEqual(deadEnds, [], `${scenario.id}: ${deadEnds.join(', ')}`);
   }
+  useWorld(DEFAULT_WORLD);
 });
 
 test('the catalogue describes each scenario', () => {

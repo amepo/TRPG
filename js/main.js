@@ -9,6 +9,8 @@ import { startSolo, resumeSolo } from './ui/solo.js';
 import { TableScreen } from './ui/table.js';
 import { EditorScreen } from './ui/editor.js';
 import { Session } from './core/engine.js';
+import { startTheming } from './ui/theme.js';
+import { useWorld, DEFAULT_WORLD } from './worlds/index.js';
 
 const TITLES = {
   home: '灯火のテーブル',
@@ -21,6 +23,7 @@ const TITLES = {
 
 class App {
   constructor() {
+    startTheming();
     this.screen = $('#screen');
     this.backBtn = $('#backBtn');
     this.titleEl = $('#screenTitle');
@@ -72,6 +75,7 @@ class App {
         break;
       case 'play':
         if (!this.play) { this.show('home', { replace: true }); return; }
+        this.titleEl.textContent = this.play.session.scenario.title;
         this.play.root = this.screen;
         this.play.render();
         this.actions.append(el('button', { onclick: () => this.play.save() }, ['セーブ']));
@@ -84,6 +88,7 @@ class App {
         break;
       case 'home':
       default:
+        if (!this.play) useWorld(DEFAULT_WORLD);
         homeScreen(this.screen, { app: this });
     }
   }
@@ -92,13 +97,15 @@ class App {
 
   chooseScenario(scenario) {
     this.pendingScenario = scenario;
+    // The party is built from the scenario's setting, so switch worlds before
+    // the builder opens — otherwise you recruit knights for a cyberpunk job.
+    useWorld(scenario.world || DEFAULT_WORLD);
     this.show('party');
   }
 
   /** Jump straight from the editor into a play test. */
   playScenario(scenario) {
-    this.pendingScenario = scenario;
-    this.show('party');
+    this.chooseScenario(scenario);
   }
 
   beginPlay(party) {

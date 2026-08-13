@@ -11,6 +11,7 @@ import {
 import { SKILLS, skillName, DIFFICULTY } from '../core/rules.js';
 import { MONSTERS, encounterDifficulty } from '../core/content.js';
 import { listScenarios, putScenario, deleteScenario, downloadJSON, pickJSON } from '../core/store.js';
+import { WORLDS, useWorld, worldById, DEFAULT_WORLD } from '../worlds/index.js';
 
 export class EditorScreen {
   constructor(root, { app, scenario = null }) {
@@ -18,7 +19,13 @@ export class EditorScreen {
     this.app = app;
     this.scenario = scenario ? normalize(scenario) : null;
     this.nodeId = null;
+    this.syncWorld();
     this.render();
+  }
+
+  /** Whatever is being edited decides which world the pickers show. */
+  syncWorld() {
+    useWorld(this.scenario?.world || DEFAULT_WORLD);
   }
 
   render() {
@@ -35,7 +42,7 @@ export class EditorScreen {
         el('h2', { class: 'card__title', text: 'シナリオ工房' }),
         el('p', { class: 'muted tiny', text: '場面をつなげて物語を作る。判定・戦闘・分岐・複数エンディングまで書ける。書いたものはそのままソロプレイで遊べる。' }),
         el('div', { class: 'row' }, [
-          button('新しく作る', () => { this.scenario = blankScenario(); this.nodeId = 'start'; this.render(); }, 'btn btn--primary grow'),
+          button('新しく作る', () => this.createNew(), 'btn btn--primary grow'),
           button('JSONを読み込む', () => this.importFile(), 'btn grow'),
         ]),
       ]),
@@ -47,9 +54,12 @@ export class EditorScreen {
           return el('div', { class: 'row', style: { gap: '6px' } }, [
             el('button', {
               class: 'tile grow',
-              onclick: () => { this.scenario = normalize(scenario); this.nodeId = scenario.start; this.render(); },
+              onclick: () => { this.scenario = normalize(scenario); this.nodeId = scenario.start; this.syncWorld(); this.render(); },
             }, [
-              el('div', { class: 'tile__head' }, [el('span', { class: 'tile__name', text: scenario.title })]),
+              el('div', { class: 'tile__head' }, [
+                el('span', { class: 'tile__name', text: scenario.title }),
+                el('span', { class: 'world-tag', text: worldById(scenario.world || DEFAULT_WORLD)?.name || '' }),
+              ]),
               el('div', { class: 'tiny faint', text: `場面 ${info.nodeCount}／戦闘 ${info.combatCount}／判定 ${info.checkCount}／結末 ${info.endingCount}` }),
             ]),
             el('div', { class: 'stack', style: { gap: '5px' } }, [
@@ -69,6 +79,28 @@ export class EditorScreen {
     ]));
   }
 
+  /** A new scenario starts by choosing its setting — it changes everything. */
+  createNew() {
+    openSheet('どの世界観で作る？', el('div', { class: 'stack' }, WORLDS.map(world =>
+      el('button', {
+        class: 'tile',
+        onclick: () => {
+          closeSheet();
+          this.scenario = blankScenario('新しいシナリオ', world.id);
+          this.nodeId = 'start';
+          this.syncWorld();
+          this.render();
+        },
+      }, [
+        el('div', { class: 'tile__head' }, [
+          el('span', { class: 'tile__icon', text: world.icon }),
+          el('span', { class: 'tile__name', text: world.name }),
+        ]),
+        el('div', { class: 'tile__desc', text: world.blurb }),
+        el('div', { class: 'tiny faint', text: `${world.classes.length} クラス／${Object.keys(world.monsters).length} 種の敵` }),
+      ]))));
+  }
+
   async importFile() {
     try {
       const data = await pickJSON();
@@ -76,6 +108,7 @@ export class EditorScreen {
       if (!result.ok) { toast(`読み込めません: ${result.errors[0]}`); return; }
       this.scenario = normalize(data);
       this.nodeId = data.start;
+      this.syncWorld();
       putScenario(this.scenario);
       this.render();
       toast('読み込みました');
@@ -119,6 +152,15 @@ export class EditorScreen {
         class: 'textarea', value: s.blurb || '',
         oninput: e => { s.blurb = e.target.value; },
       })),
+      field('世界観（クラス・装備・敵・技能が入れ替わります）', el('select', {
+        class: 'select',
+        onchange: e => {
+          s.world = e.target.value;
+          this.syncWorld();
+          toast('世界観を変えました。既存の敵や技能の指定は要見直しです。');
+          this.render();
+        },
+      }, WORLDS.map(w => el('option', { value: w.id, text: `${w.icon} ${w.name}`, selected: w.id === (s.world || DEFAULT_WORLD) })))),
       el('div', { class: 'row' }, [
         el('div', { class: 'grow' }, [field('開始する場面', el('select', {
           class: 'select',

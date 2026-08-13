@@ -13,8 +13,10 @@ import {
 import {
   ANCESTRIES, CLASSES, BACKGROUNDS, WEAPONS, ARMORS, SHIELD, ITEMS,
   ancestryById, classById, backgroundById, spellSlots, sneakAttackDice,
-  CLASS_SPELLS, spellById,
+  CLASS_SPELLS, spellById, PORTRAITS,
 } from './content.js';
+import { aggregate, strainUsed, strainCapacity, hasAugments } from './augment.js';
+import { activeWorld } from '../worlds/index.js';
 
 export const POINT_BUY_BUDGET = 27;
 const POINT_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
@@ -75,6 +77,7 @@ export function createCharacter(draft = {}) {
     deathSaves: { success: 0, fail: 0 },
     inventory: [],
     equipped: {},
+    augments: [...(draft.augments || [])],
     spells: [...(draft.spells || [])],
     cantrips: [...(klass.caster?.cantrips || [])],
     slots: {},
@@ -92,7 +95,6 @@ export function createCharacter(draft = {}) {
   return character;
 }
 
-const PORTRAITS = { fighter: '🛡️', rogue: '🗡️', mage: '🔮', cleric: '✨', ranger: '🏹' };
 const pickPortrait = classId => PORTRAITS[classId] || '🎲';
 
 function equipStartingGear(character, klass, background) {
@@ -119,18 +121,23 @@ export function recalculate(character) {
   const ancestry = ancestryById(character.ancestryId);
   const conMod = abilityMod(character.abilities.con);
 
+  // Implants first: their totals feed hit points, AC and every skill below.
+  applyAugments(character, ancestry);
+
   // Level 1 takes the full hit die; later levels take its average, rounded up.
   const perLevel = Math.ceil((Number(klass.hitDie.split('d')[1]) + 1) / 2);
   character.maxHp = klass.hpBase + conMod
     + (character.level - 1) * (perLevel + conMod)
-    + (ancestry.hpPerLevel || 0) * character.level;
+    + (ancestry.hpPerLevel || 0) * character.level
+    + (character.augmentHpPerLevel || 0) * character.level;
   character.maxHp = Math.max(1, character.maxHp);
   if (character.hp === undefined) character.hp = character.maxHp;
   character.hp = Math.min(character.hp, character.maxHp);
 
   character.proficiency = proficiencyBonus(character.level);
   character.ac = armorClass(character);
-  character.initiative = abilityMod(character.abilities.dex);
+  character.initiative = abilityMod(character.abilities.dex)
+    + (ancestry.initiativeBonus || 0) + (character.initiativeBonus || 0);
   character.features = klass.features.filter(f => f.level <= character.level);
   character.hitDie = klass.hitDie;
 
@@ -147,6 +154,39 @@ export function recalculate(character) {
       character.resources[feature.id] = character.resources[feature.id] ?? { max: 1, used: 0 };
     }
   }
+  return character;
+}
+
+/* Fold every installed implant into the plain fields the rules layer reads.
+   A world without implants leaves all of these at zero, so nothing changes. */
+function applyAugments(character, ancestry) {
+  character.skillBonus = {};
+  character.acBonus = 0;
+  character.initiativeBonus = 0;
+  character.attackMod = 0;
+  character.augmentHpPerLevel = 0;
+  character.augmentAttacks = [];
+  character.resistances = [...(ancestry.resistances || [])];
+  character.immunities = [...(ancestry.immunities || [])];
+  character.strainUsed = 0;
+  character.strainCapacity = 0;
+  character.strainOver = 0;
+
+  if (!hasAugments()) return character;
+
+  const bonuses = aggregate(character);
+  character.skillBonus = bonuses.skillBonus;
+  character.acBonus = bonuses.acBonus;
+  character.initiativeBonus = bonuses.initiativeBonus;
+  character.attackMod = bonuses.attackBonus;
+  character.augmentHpPerLevel = bonuses.hpPerLevel;
+  character.augmentAttacks = bonuses.attacks;
+  character.resistances = [...new Set([...character.resistances, ...bonuses.resistances])];
+  character.immunities = [...new Set([...character.immunities, ...bonuses.immunities])];
+
+  character.strainUsed = strainUsed(character);
+  character.strainCapacity = strainCapacity(character);
+  character.strainOver = Math.max(0, character.strainUsed - character.strainCapacity);
   return character;
 }
 
@@ -172,6 +212,7 @@ export function attackOptions(character) {
   };
   push(character.equipped?.weapon, 'weapon');
   push(character.equipped?.ranged, 'ranged');
+  for (const attack of character.augmentAttacks || []) push(attack, attack.id);
   if (!out.length) push({ ...WEAPONS.unarmed }, 'unarmed');
   return out;
 }
@@ -290,6 +331,11 @@ export function sheet(character) {
 
 /** A ready-made party for players who want to skip creation. */
 export function pregeneratedParty() {
+  // Each world ships its own crew; fall back to building from whatever the
+  // active world offers so a new setting works before anyone writes one.
+  const world = activeWorld();
+  if (world.pregenerated) return world.pregenerated().map(createCharacter);
+  if (world.id !== 'embers') return genericParty();
   return [
     createCharacter({
       name: 'ガレス', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier',
@@ -319,9 +365,32 @@ export function pregeneratedParty() {
   ];
 }
 
+/* Four characters covering the four jobs any party needs, built from
+   whatever classes the active world happens to define. */
+function genericParty() {
+  const spread = [
+    { abilities: { str: 15, dex: 13, con: 14, int: 10, wis: 12, cha: 8 } },
+    { abilities: { str: 8, dex: 15, con: 13, int: 12, wis: 10, cha: 14 } },
+    { abilities: { str: 8, dex: 14, con: 12, int: 15, wis: 13, cha: 10 } },
+    { abilities: { str: 13, dex: 10, con: 14, int: 10, wis: 15, cha: 12 } },
+  ];
+  return CLASSES.slice(0, 4).map((klass, i) => createCharacter({
+    name: DEFAULT_NAMES[i] || `隊員${i + 1}`,
+    classId: klass.id,
+    ancestryId: ANCESTRIES[i % ANCESTRIES.length].id,
+    backgroundId: BACKGROUNDS[i % BACKGROUNDS.length].id,
+    abilities: spread[i].abilities,
+    skills: klass.skillList.slice(0, klass.skillChoices),
+    expertise: klass.expertiseChoices ? klass.skillList.slice(0, klass.expertiseChoices) : [],
+    spells: (CLASS_SPELLS[klass.id] || []).slice(0, 3),
+  }));
+}
+
+const DEFAULT_NAMES = ['ヴェル', 'キド', 'サーシャ', 'マオ'];
+
 /** Restore a character loaded from JSON: fills in anything a new build added. */
 export function reviveCharacter(data) {
-  const character = { conditions: [], inventory: [], spells: [], cantrips: [], resources: {}, ...data };
+  const character = { conditions: [], inventory: [], spells: [], cantrips: [], augments: [], resources: {}, ...data };
   character.abilities = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(data.abilities || {}) };
   character.level = Math.max(1, Math.min(10, character.level || 1));
   recalculate(character);

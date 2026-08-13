@@ -22,7 +22,8 @@
   --shadow: 0 6px 24px rgba(0, 0, 0, .45);
   --tap: 44px;
 
-  --serif: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  --display: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  --serif: var(--display);
   --sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
 
   --safe-top: env(safe-area-inset-top, 0px);
@@ -379,3 +380,33 @@ a { color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+/* --------------------------------------------------------------- netrun */
+
+.netrun { border-color: var(--violet); background: rgba(255, 95, 210, .05); }
+.action--netrun { border-left: 3px solid var(--violet); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+
+.trace { margin-bottom: 12px; }
+.trace__head { display: flex; justify-content: space-between; color: var(--ink-dim); margin-bottom: 4px; }
+.trace__bar { height: 8px; border-radius: 4px; background: var(--bg-2); border: 1px solid var(--line); overflow: hidden; }
+.trace__fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); transition: width .3s; }
+.trace__fill.is-warn { background: linear-gradient(90deg, #b08a3a, var(--violet)); }
+.trace__fill.is-critical { background: linear-gradient(90deg, var(--violet), var(--blood)); }
+
+/* ------------------------------------------------------------ augments */
+
+.strain { margin-top: 6px; }
+.strain__bar { height: 8px; border-radius: 4px; background: var(--bg-2); border: 1px solid var(--line); overflow: hidden; }
+.strain__fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); transition: width .3s; }
+.strain__fill.is-full { background: linear-gradient(90deg, var(--gold), #d98d3a); }
+.strain__fill.is-over { background: linear-gradient(90deg, var(--blood), #ff8fa3); }
+
+.aug { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel); width: 100%; text-align: left; color: inherit; }
+.aug[aria-pressed="true"] { border-color: var(--gold-dim); background: rgba(60, 224, 224, .08); }
+.aug__name { font-size: 14px; }
+.aug__meta { font-size: 12px; color: var(--ink-faint); display: block; margin-top: 2px; }
+.aug__strain { flex: none; font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* -------------------------------------------------------------- worlds */
+
+.world-tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-dim); }

@@ -11,6 +11,8 @@ import {
   shortRest, longRest, skillMod, skillName, levelForXp, abilityName,
 } from './rules.js';
 import { Combat, spawnGroup, spawnMonster } from './combat.js';
+import { Netrun } from './netrun.js';
+import { useWorld, DEFAULT_WORLD } from '../worlds/index.js';
 import { recalculate, awardXp, levelUp, reviveCharacter } from './character.js';
 import { MONSTERS, ITEMS, classById } from './content.js';
 import {
@@ -24,6 +26,9 @@ export class Session extends EventTarget {
   constructor({ scenario, party, seed, autoRoll = false } = {}) {
     super();
     this.scenario = normalize(scenario);
+    // The world must be active before anything reads classes, skills or
+    // monsters — the whole content layer is a view onto it.
+    this.world = useWorld(this.scenario.world || DEFAULT_WORLD).id;
     this.party = party.map(recalculate);
     this.rng = new Rng(seed);
     this.autoRoll = autoRoll;
@@ -35,6 +40,7 @@ export class Session extends EventTarget {
     this.log = [];
     this.nodeId = null;
     this.combat = null;
+    this.netrun = null;
     this.finished = false;
     this.ending = null;
     this.pending = null;              // a check waiting for the player to pick who rolls
@@ -122,6 +128,7 @@ export class Session extends EventTarget {
     if (node.rest) this.rest(node.rest);
 
     if (node.combat) return this.beginCombat(node.combat);
+    if (node.netrun) return this.beginNetrun(node.netrun);
     if (node.ending) return this.finish(node.ending);
     if (node.next && !node.choices?.length) return this.goto(node.next);
 
@@ -179,6 +186,7 @@ export class Session extends EventTarget {
     const choice = node?.choices?.[index];
     if (!choice) return { error: 'その選択肢は選べません' };
     if (this.combat && !this.combat.over) return { error: '戦闘中です' };
+    if (this.netrun && !this.netrun.over) return { error: '接続中です' };
 
     const ctx = this.ctx();
     if (choice.requires && !testCondition(choice.requires, ctx)) {
@@ -292,6 +300,53 @@ export class Session extends EventTarget {
     return this.view();
   }
 
+  /* -------------------------------------------------------------- netrun */
+
+  beginNetrun(spec) {
+    this.checkpoint();
+    this.netrun = new Netrun(spec, this.living, {
+      rng: this.rng,
+      onLog: entry => this.say(entry.text, entry.kind === 'info' ? 'system' : entry.kind),
+    });
+    this.netrunSpec = spec;
+    const step = this.netrun.start();
+    if (step.done) return this.endNetrun(step);
+    this.emit('change');
+    return this.view();
+  }
+
+  /** One move inside a netrun: pick how to get through the current layer. */
+  hack(action) {
+    if (!this.netrun || this.netrun.over) return { error: '接続していません' };
+    const step = this.netrun.act(action);
+    if (step?.error) return step;
+    if (step.done) return this.endNetrun(step);
+    this.emit('change');
+    return this.view();
+  }
+
+  endNetrun(step) {
+    const spec = this.netrunSpec || {};
+    const traced = step.result !== 'success';
+    this.netrun = null;
+
+    if (!traced) {
+      const layerEffects = (spec.layers || []).flatMap(l => l.effects || []);
+      if (layerEffects.length) applyEffects(layerEffects, this.ctx());
+      if (spec.onSuccess?.effects) applyEffects(spec.onSuccess.effects, this.ctx());
+      if (spec.onSuccess?.text) for (const p of [].concat(spec.onSuccess.text)) this.say(interpolate(p, this.ctx()), 'narration');
+      if (spec.onSuccess?.to) return this.goto(spec.onSuccess.to);
+    } else {
+      if (spec.onTraced?.effects) applyEffects(spec.onTraced.effects, this.ctx());
+      if (spec.onTraced?.text) for (const p of [].concat(spec.onTraced.text)) this.say(interpolate(p, this.ctx()), 'narration');
+      // Being traced can hand the job straight to whatever was watching.
+      if (spec.ice?.length) return this.beginCombat({ title: '逆探知', enemies: spec.ice, onVictory: spec.onTraced?.to ? { to: spec.onTraced.to } : undefined });
+      if (spec.onTraced?.to) return this.goto(spec.onTraced.to);
+    }
+    this.emit('change');
+    return this.view();
+  }
+
   /* ---------------------------------------------------- party maintenance */
 
   grantXp(amount) {
@@ -378,12 +433,16 @@ export class Session extends EventTarget {
       nodeId: this.nodeId,
       node: this.node ? { title: this.node.title, art: this.node.art } : null,
       log: this.log,
-      choices: this.combat ? [] : this.availableChoices(),
+      choices: (this.combat || this.netrun) ? [] : this.availableChoices(),
       combat: this.combat ? {
         ...this.combat.state(),
         options: this.combat.isPlayerTurn ? this.combat.options() : [],
         targets: this.combat.livingEnemies.map(e => ({ uid: e.uid, name: e.name, hp: e.hp, maxHp: e.maxHp, kind: e.kind })),
         allies: this.combat.livingParty.map(p => ({ uid: p.id, name: p.name, hp: p.hp, maxHp: p.maxHp })),
+      } : null,
+      netrun: this.netrun ? {
+        ...this.netrun.state(),
+        options: this.netrun.options(),
       } : null,
       party: this.party.map(p => ({
         id: p.id, name: p.name, portrait: p.portrait, classId: p.classId, level: p.level,
@@ -395,7 +454,8 @@ export class Session extends EventTarget {
       flags: [...this.flags],
       finished: this.finished,
       ending: this.ending,
-      canRest: !this.combat && !this.finished,
+      canRest: !this.combat && !this.netrun && !this.finished,
+      world: this.world,
     };
   }
 
@@ -405,7 +465,8 @@ export class Session extends EventTarget {
     // Mid-combat, fall back to the checkpoint taken when the scene opened.
     const point = this.combat && this._checkpoint ? this._checkpoint : null;
     return {
-      version: 1,
+      version: 2,
+      world: this.world,
       scenarioId: this.scenario.id,
       scenario: this.scenario,
       party: point ? point.party : this.party,

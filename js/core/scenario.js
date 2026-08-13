@@ -29,6 +29,8 @@
    Outcome = { text, to, effects }
 */
 
+import { label } from './content.js';
+
 /* ------------------------------------------------------------- conditions */
 
 /**
@@ -132,7 +134,11 @@ export function applyEffects(effects, ctx) {
 
     if (effect.gold) {
       const target = pickCarrier(ctx);
-      if (target) { target.gold = (target.gold || 0) + effect.gold; say(`所持金 ${effect.gold > 0 ? '+' : ''}${effect.gold} 枚`, effect.gold > 0 ? 'good' : 'bad'); }
+      if (target) {
+        target.gold = (target.gold || 0) + effect.gold;
+        say(`${label('gold', '所持金')} ${effect.gold > 0 ? '+' : ''}${effect.gold} ${label('goldUnit', '枚')}`,
+          effect.gold > 0 ? 'good' : 'bad');
+      }
     }
 
     if (effect.xp) { ctx.awardXp?.(effect.xp); }
@@ -225,6 +231,8 @@ export function validate(scenario, { monsters = {} } = {}) {
     walk(node.combat?.onVictory?.to);
     walk(node.combat?.onDefeat?.to);
     walk(node.combat?.onFlee?.to);
+    walk(node.netrun?.onSuccess?.to);
+    walk(node.netrun?.onTraced?.to);
     walk(node.next);
   };
   walk(scenario?.start);
@@ -232,7 +240,7 @@ export function validate(scenario, { monsters = {} } = {}) {
   let endings = 0;
   for (const [id, node] of Object.entries(nodes)) {
     const where = `ノード "${id}"`;
-    if (!node.text && !node.combat && !node.ending) warnings.push(`${where}: 本文が空です`);
+    if (!node.text && !node.combat && !node.netrun && !node.ending) warnings.push(`${where}: 本文が空です`);
     if (node.ending) endings++;
 
     for (const [i, choice] of (node.choices || []).entries()) {
@@ -264,8 +272,24 @@ export function validate(scenario, { monsters = {} } = {}) {
       if (!node.combat.onVictory?.to) warnings.push(`${where}: 勝利後の行き先が未設定です`);
     }
 
-    if (!node.choices?.length && !node.combat && !node.ending && !node.next) {
-      warnings.push(`${where}: 行き止まりです（選択肢・戦闘・エンディングのいずれも無し）`);
+    if (node.netrun) {
+      const layers = node.netrun.layers || [];
+      if (!layers.length) errors.push(`${where}: 侵入に層がありません`);
+      for (const [i, layer] of layers.entries()) {
+        const at = `${where} の第${i + 1}層`;
+        if (!layer.skill) errors.push(`${at}: 判定の技能が未指定です`);
+        if (!Number.isFinite(Number(layer.dc))) errors.push(`${at}: DCが不正です`);
+      }
+      for (const enemy of node.netrun.ice || []) {
+        if (!monsters[enemy] && !scenario.monsters?.[enemy]) errors.push(`${where}: 未知の ICE "${enemy}"`);
+      }
+      linkTo(node.netrun.onSuccess?.to, `${where}（突破）`);
+      linkTo(node.netrun.onTraced?.to, `${where}（逆探知）`);
+      if (!node.netrun.onSuccess?.to) warnings.push(`${where}: 突破後の行き先が未設定です`);
+    }
+
+    if (!node.choices?.length && !node.combat && !node.netrun && !node.ending && !node.next) {
+      warnings.push(`${where}: 行き止まりです（選択肢・戦闘・侵入・エンディングのいずれも無し）`);
     }
     if (!reachable.has(id)) warnings.push(`${where}: 開始地点から到達できません`);
   }
@@ -278,10 +302,11 @@ export function validate(scenario, { monsters = {} } = {}) {
 /* ------------------------------------------------------------ construction */
 
 /** An empty scenario, used by the editor's "new" button. */
-export function blankScenario(title = '新しいシナリオ') {
+export function blankScenario(title = '新しいシナリオ', world = 'embers') {
   return {
     id: `sc_${Date.now().toString(36)}`,
     title,
+    world,
     author: '',
     blurb: '',
     level: 1,
@@ -311,6 +336,7 @@ export function blankScenario(title = '新しいシナリオ') {
 export function normalize(scenario) {
   const copy = structuredClone(scenario);
   for (const [id, node] of Object.entries(copy.nodes || {})) node.id = id;
+  copy.world = copy.world || 'embers';
   copy.vars = copy.vars || {};
   copy.items = copy.items || {};
   copy.monsters = copy.monsters || {};
@@ -324,9 +350,11 @@ export function describe(scenario) {
     id: scenario.id,
     title: scenario.title,
     blurb: scenario.blurb,
+    world: scenario.world || 'embers',
     level: scenario.level || 1,
     nodeCount: nodes.length,
     combatCount: nodes.filter(n => n.combat).length,
+    netrunCount: nodes.filter(n => n.netrun).length,
     endingCount: nodes.filter(n => n.ending).length,
     checkCount: nodes.reduce((s, n) => s + (n.choices || []).filter(c => c.check).length, 0),
   };

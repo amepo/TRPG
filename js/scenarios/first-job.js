@@ -4,7 +4,8 @@
 export const firstJob = {
   id: 'first-job',
   title: 'はじめての依頼',
-  author: 'WEBtesu TRPG',
+  author: '灯火のテーブル',
+  world: 'embers',
   blurb: '納屋に何かが住み着いた。追い出してくれれば銀貨五枚。——遊び方を覚えるための、小さな仕事。',
   level: 1,
   length: '導入（10〜15分）',

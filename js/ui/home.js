@@ -2,6 +2,7 @@
 
 import { el, clear, toast, confirmSheet, button, openSheet, frag } from './dom.js';
 import { catalogue, byId } from '../scenarios/index.js';
+import { WORLDS, useWorld, worldById, DEFAULT_WORLD } from '../worlds/index.js';
 import { listSaves, deleteSave, listScenarios, usage } from '../core/store.js';
 import { describe, validate } from '../core/scenario.js';
 import { MONSTERS } from '../core/content.js';
@@ -68,30 +69,46 @@ const modeTile = (icon, name, desc, onclick) => el('button', { class: 'tile', on
 export function scenarioScreen(root, { app }) {
   const built = catalogue();
   const mine = listScenarios();
+  const restore = () => useWorld(DEFAULT_WORLD);
 
   clear(root).append(el('div', { class: 'stack' }, [
     el('div', { class: 'card' }, [
       el('h2', { class: 'card__title', text: 'シナリオを選ぶ' }),
       el('p', { class: 'muted tiny', text: 'はじめてなら「はじめての依頼」から。10分ほどで一通りの操作を覚えられます。' }),
+      el('p', { class: 'muted tiny', text: '世界観ごとに、クラスも装備も敵もルールも入れ替わります。' }),
     ]),
 
-    ...built.map(card => el('button', {
-      class: 'tile',
-      onclick: () => app.chooseScenario(byId(card.id)),
-    }, [
-      el('div', { class: 'tile__head' }, [
-        el('span', { class: 'tile__icon', text: card.tutorial ? '🕯️' : '🔔' }),
-        el('span', { class: 'tile__name', text: card.title }),
-        el('span', { class: 'tiny faint grow', style: { textAlign: 'right' }, text: card.length }),
-      ]),
-      el('div', { class: 'tile__desc', text: card.blurb }),
-      el('div', { class: 'tiny faint', text: `推奨Lv${card.level}｜場面 ${card.nodeCount}／戦闘 ${card.combatCount}／判定 ${card.checkCount}／結末 ${card.endingCount}` }),
-    ])),
+    // Grouped by setting, because picking a scenario also picks a world.
+    ...WORLDS.flatMap(world => {
+      const cards = built.filter(c => c.world === world.id);
+      if (!cards.length) return [];
+      return [
+        el('div', { class: 'spread', style: { marginTop: '6px' } }, [
+          el('h3', { class: 'card__title', text: `${world.icon} ${world.name}` }),
+          el('span', { class: 'tiny faint', text: world.tagline }),
+        ]),
+        ...cards.map(card => el('button', {
+          class: 'tile',
+          onclick: () => app.chooseScenario(byId(card.id)),
+        }, [
+          el('div', { class: 'tile__head' }, [
+            el('span', { class: 'tile__icon', text: card.tutorial ? '🕯️' : world.icon }),
+            el('span', { class: 'tile__name', text: card.title }),
+            el('span', { class: 'tiny faint grow', style: { textAlign: 'right' }, text: card.length }),
+          ]),
+          el('div', { class: 'tile__desc', text: card.blurb }),
+          el('div', { class: 'tiny faint', text: `推奨Lv${card.level}｜場面 ${card.nodeCount}／戦闘 ${card.combatCount}${card.netrunCount ? `／侵入 ${card.netrunCount}` : ''}／判定 ${card.checkCount}／結末 ${card.endingCount}` }),
+        ])),
+      ];
+    }),
 
     mine.length ? el('div', { class: 'stack' }, [
       el('h3', { class: 'card__title', style: { marginTop: '8px' }, text: '自作シナリオ' }),
       ...mine.map(scenario => {
         const info = describe(scenario);
+        // Check each scenario against its own setting — monster ids only
+        // resolve in the world they were written for.
+        useWorld(info.world);
         const check = validate(scenario, { monsters: MONSTERS });
         return el('button', {
           class: 'tile',
@@ -103,12 +120,14 @@ export function scenarioScreen(root, { app }) {
           el('div', { class: 'tile__head' }, [
             el('span', { class: 'tile__icon', text: '📝' }),
             el('span', { class: 'tile__name', text: scenario.title }),
+            el('span', { class: 'world-tag', text: worldById(info.world)?.name || info.world }),
           ]),
           el('div', { class: 'tiny faint', text: `場面 ${info.nodeCount}／戦闘 ${info.combatCount}／結末 ${info.endingCount}${check.ok ? '' : '　⚠ 未完成'}` }),
         ]);
       }),
     ]) : null,
   ]));
+  restore();
 }
 
 /* ----------------------------------------------------------------- help */

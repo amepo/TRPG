@@ -10,7 +10,7 @@ import {
   createCharacter, pregeneratedParty, POINT_BUY_BUDGET, pointsSpent, pointCost,
   STANDARD_ARRAY, rollAbilities, reviveCharacter,
 } from '../core/character.js';
-import { ANCESTRIES, CLASSES, BACKGROUNDS, CLASS_SPELLS, spellById } from '../core/content.js';
+import { ANCESTRIES, CLASSES, BACKGROUNDS, CLASS_SPELLS, spellById, label } from '../core/content.js';
 import { ABILITIES, ABILITY_IDS, abilityMod, SKILLS, skillName } from '../core/rules.js';
 import { Rng } from '../core/rng.js';
 import { listCharacters, putCharacter, deleteCharacter } from '../core/store.js';
@@ -114,9 +114,9 @@ export function randomCharacter(rng = new Rng()) {
 export function openBuilder(onDone) {
   const draft = {
     name: '',
-    classId: 'fighter',
-    ancestryId: 'human',
-    backgroundId: 'soldier',
+    classId: CLASSES[0].id,
+    ancestryId: ANCESTRIES[0].id,
+    backgroundId: BACKGROUNDS[0].id,
     abilities: Object.fromEntries(ABILITY_IDS.map(id => [id, 8])),
     skills: [],
     expertise: [],
@@ -127,10 +127,10 @@ export function openBuilder(onDone) {
   let step = 0;
 
   const steps = [
-    { title: '種族', render: () => stepAncestry(draft, refresh) },
-    { title: 'クラス', render: () => stepClass(draft, refresh) },
+    { title: label('ancestry', '種族'), render: () => stepAncestry(draft, refresh) },
+    { title: label('klass', 'クラス'), render: () => stepClass(draft, refresh) },
     { title: '能力値', render: () => stepAbilities(draft, refresh) },
-    { title: '技能と経歴', render: () => stepSkills(draft, refresh) },
+    { title: `技能と${label('background', '経歴')}`, render: () => stepSkills(draft, refresh) },
     { title: '仕上げ', render: () => stepFinish(draft, refresh) },
   ];
 
@@ -291,7 +291,7 @@ function stepSkills(draft, refresh) {
   ]) : null;
 
   const spells = klass.caster ? el('div', { class: 'stack' }, [
-    el('h3', { class: 'card__title', text: '習得する呪文（3つまで）' }),
+    el('h3', { class: 'card__title', text: `習得する${label('spellPlural', '呪文')}（3つまで）` }),
     el('div', { class: 'chips' }, (CLASS_SPELLS[klass.id] || []).map(id => {
       const on = draft.spells.includes(id);
       const spell = spellById(id);
@@ -308,12 +308,12 @@ function stepSkills(draft, refresh) {
   ]) : null;
 
   return el('div', { class: 'stack' }, [
-    el('h3', { class: 'card__title', text: `クラス技能（あと ${Math.max(0, remaining)} つ）` }),
+    el('h3', { class: 'card__title', text: `${label('klass', 'クラス')}技能（あと ${Math.max(0, remaining)} つ）` }),
     skillChips,
     expertise,
     spells,
-    el('h3', { class: 'card__title', style: { marginTop: '10px' }, text: '経歴' }),
-    el('p', { class: 'tiny muted', text: `経歴からは ${background.skills.map(skillName).join('・')} が自動で身につく。` }),
+    el('h3', { class: 'card__title', style: { marginTop: '10px' }, text: label('background', '経歴') }),
+    el('p', { class: 'tiny muted', text: `${label('background', '経歴')}からは ${background.skills.map(skillName).join('・')} が自動で身につく。` }),
     backgrounds,
   ]);
 }

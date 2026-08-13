@@ -6,19 +6,24 @@
    so the log can explain itself. */
 
 import { roll } from './dice.js';
+import { onWorld } from '../worlds/index.js';
 
-/* --------------------------------------------------------------- abilities */
+/* ---------------------------------------------- abilities and skills */
 
-export const ABILITIES = [
-  { id: 'str', name: '筋力', short: '筋', desc: '力任せの行動、近接攻撃、荷物' },
-  { id: 'dex', name: '敏捷', short: '敏', desc: '回避、隠密、手先、射撃' },
-  { id: 'con', name: '耐久', short: '耐', desc: '体力、毒や疲労への抵抗' },
-  { id: 'int', name: '知力', short: '知', desc: '知識、推理、魔術の理論' },
-  { id: 'wis', name: '判断', short: '判', desc: '観察、直感、信仰、意志' },
-  { id: 'cha', name: '魅力', short: '魅', desc: '説得、威圧、演技、交渉' },
-];
+/* Both lists belong to the world, not to the rules: a setting may rename
+   "魔法学" to "電脳理論" or swap a skill out entirely. The ids are the stable
+   part — scenarios reference those. */
 
-export const ABILITY_IDS = ABILITIES.map(a => a.id);
+export let ABILITIES = [];
+export let ABILITY_IDS = [];
+export let SKILLS = [];
+
+onWorld(world => {
+  ABILITIES = world.abilities;
+  ABILITY_IDS = world.abilities.map(a => a.id);
+  SKILLS = world.skills;
+});
+
 export const abilityName = id => ABILITIES.find(a => a.id === id)?.name || id;
 
 /** −5 … +10 for scores 1 … 30. */
@@ -29,29 +34,6 @@ export const signed = n => (n < 0 ? `−${Math.abs(n)}` : `+${n}`);
 
 /** Levels 1–4 → +2, 5–8 → +3, and so on. */
 export const proficiencyBonus = level => 2 + Math.floor((Math.max(1, level) - 1) / 4);
-
-/* ----------------------------------------------------------------- skills */
-
-export const SKILLS = [
-  { id: 'athletics', name: '運動', ability: 'str' },
-  { id: 'acrobatics', name: '軽業', ability: 'dex' },
-  { id: 'stealth', name: '隠密', ability: 'dex' },
-  { id: 'sleight', name: '手先の早業', ability: 'dex' },
-  { id: 'arcana', name: '魔法学', ability: 'int' },
-  { id: 'history', name: '歴史', ability: 'int' },
-  { id: 'investigation', name: '捜査', ability: 'int' },
-  { id: 'nature', name: '自然', ability: 'int' },
-  { id: 'religion', name: '宗教', ability: 'int' },
-  { id: 'perception', name: '知覚', ability: 'wis' },
-  { id: 'insight', name: '看破', ability: 'wis' },
-  { id: 'medicine', name: '医術', ability: 'wis' },
-  { id: 'survival', name: '生存', ability: 'wis' },
-  { id: 'animal', name: '動物使い', ability: 'wis' },
-  { id: 'persuasion', name: '説得', ability: 'cha' },
-  { id: 'deception', name: '欺瞞', ability: 'cha' },
-  { id: 'intimidation', name: '威圧', ability: 'cha' },
-  { id: 'performance', name: '芸能', ability: 'cha' },
-];
 
 export const skillById = id => SKILLS.find(s => s.id === id) || null;
 export const skillName = id => skillById(id)?.name || id;
@@ -111,6 +93,13 @@ export function resolveMode({ advantage = false, disadvantage = false } = {}) {
 
 /* -------------------------------------------------------------- modifiers */
 
+/* Gear and implants can push a single skill up, and a body carrying more
+   hardware than it can take drags everything down. Both are plain numbers
+   stored on the character by recalculate(), so the rules layer stays free of
+   any world-specific notion of what an implant is. */
+const strainPenalty = actor => actor.strainOver || 0;
+const gearBonus = (actor, skillId) => actor.skillBonus?.[skillId] || 0;
+
 /** Ability modifier plus proficiency if the creature is trained in `skill`. */
 export function skillMod(actor, skillId) {
   const skill = skillById(skillId);
@@ -119,13 +108,13 @@ export function skillMod(actor, skillId) {
   const pb = proficiencyBonus(actor.level || 1);
   if (skill && actor.skills?.includes(skillId)) mod += pb;
   if (skill && actor.expertise?.includes(skillId)) mod += pb;   // doubled proficiency
-  return mod;
+  return mod + gearBonus(actor, skillId) - strainPenalty(actor);
 }
 
 export function saveMod(actor, ability) {
   let mod = abilityMod(actor.abilities?.[ability] ?? 10);
   if (actor.saves?.includes(ability)) mod += proficiencyBonus(actor.level || 1);
-  return mod;
+  return mod - strainPenalty(actor);
 }
 
 /** Passive score — used for "does the character notice it" without a roll. */
@@ -232,7 +221,9 @@ export function attackBonus(actor, attack) {
   if (typeof attack.bonus === 'number') return attack.bonus;          // monsters state it flat
   const ability = attack.ability || 'str';
   const pb = attack.proficient === false ? 0 : proficiencyBonus(actor.level || 1);
-  return abilityMod(actor.abilities?.[ability] ?? 10) + pb + (attack.magic || 0);
+  const gear = attack.ranged ? (actor.attackMod || 0) : 0;            // e.g. a smartlink
+  return abilityMod(actor.abilities?.[ability] ?? 10) + pb + (attack.magic || 0)
+    + gear - strainPenalty(actor);
 }
 
 /** Damage; a critical hit rolls the dice twice and keeps the flat parts once. */

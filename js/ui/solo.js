@@ -4,6 +4,7 @@ import { el, frag, clear, toast, openSheet, closeSheet, confirmSheet, button } f
 import { partyList, openCharacterSheet } from './sheet.js';
 import { Session } from '../core/engine.js';
 import { skillName } from '../core/rules.js';
+import { label, ENEMY_ICONS } from '../core/content.js';
 import { putSave } from '../core/store.js';
 
 export class SoloScreen {
@@ -42,6 +43,7 @@ export class SoloScreen {
     this.drawLog(view);
     this.drawSide(view);
     if (view.combat) this.drawCombat(view);
+    else if (view.netrun) this.drawNetrun(view);
     else this.drawChoices(view);
   }
 
@@ -81,7 +83,7 @@ export class SoloScreen {
         el('h2', { class: 'card__title', text: view.ending?.title || '物語の終わり' }),
         el('p', { class: 'muted', text: '記録は残った。次の卓へ。' }),
         el('div', { class: 'row', style: { justifyContent: 'center' } }, [
-          button('冒険の記録を見る', () => this.showSummary(view)),
+          button(`${label('adventure', '冒険')}の記録を見る`, () => this.showSummary(view)),
           button('タイトルへ戻る', () => this.app.go('home'), 'btn btn--primary'),
         ]),
       ]));
@@ -211,6 +213,74 @@ export class SoloScreen {
     this.update();
   }
 
+  /* ------------------------------------------------------------- netrun */
+
+  drawNetrun(view) {
+    const run = view.netrun;
+    const box = clear(this.choiceBox);
+    const panel = el('div', { class: 'combat netrun' });
+
+    panel.append(el('div', { class: 'combat__head' }, [
+      el('span', { class: 'combat__round', text: `${run.title}　第${run.layerIndex + 1}／${run.layerCount}層` }),
+      el('span', { class: 'tiny muted', text: run.runner ? `接続: ${run.runner}` : '' }),
+    ]));
+
+    // The trace clock is the whole tension of a run — show it big.
+    const filled = Math.round((run.trace / run.traceMax) * 100);
+    panel.append(el('div', { class: 'trace' }, [
+      el('div', { class: 'trace__head' }, [
+        el('span', { class: 'tiny', text: '追跡' }),
+        el('span', { class: 'tiny', text: `${run.trace} / ${run.traceMax}` }),
+      ]),
+      el('div', { class: 'trace__bar' }, [
+        el('div', {
+          class: `trace__fill ${run.trace >= run.traceMax - 1 ? 'is-critical' : run.trace > run.traceMax / 2 ? 'is-warn' : ''}`,
+          style: { width: `${filled}%` },
+        }),
+      ]),
+    ]));
+
+    if (run.layer) {
+      panel.append(el('p', { class: 'hint', text: `${run.layer.name} — 【${skillName(run.layer.skill)}】 DC${run.layer.dc}` }));
+    }
+
+    panel.append(el('div', { class: 'actions' }, run.options.map(option =>
+      el('button', {
+        class: 'action action--netrun',
+        onclick: () => this.hack(option),
+      }, [
+        el('span', { text: option.name + (option.dc ? `（DC${option.dc}）` : '（自動成功）') }),
+        el('span', { class: 'choice__meta', text: option.desc }),
+      ]))));
+
+    if (run.candidates.length > 1) {
+      panel.append(el('button', {
+        class: 'btn btn--sm btn--ghost', style: { marginTop: '10px' },
+        onclick: () => this.pickRunner(run),
+      }, ['接続する担当を変える']));
+    }
+
+    box.append(panel);
+  }
+
+  pickRunner(run) {
+    openSheet('誰が潜る？', el('div', { class: 'party' }, run.candidates.map(c =>
+      el('button', {
+        class: 'pc',
+        onclick: () => { closeSheet(); this.session.netrun.runnerId = c.id; this.update(); },
+      }, [
+        el('span', { class: 'pc__face', text: '🕶️' }),
+        el('span', { class: 'pc__body' }, [el('span', { class: 'pc__name', text: c.name })]),
+        el('span', { class: 'pc__hp', text: c.mod >= 0 ? `+${c.mod}` : `−${Math.abs(c.mod)}` }),
+      ]))));
+  }
+
+  hack(option) {
+    const result = this.session.hack({ id: option.id });
+    if (result?.error) toast(result.error);
+    this.update();
+  }
+
   /* ---------------------------------------------------------------- side */
 
   drawSide(view) {
@@ -218,7 +288,7 @@ export class SoloScreen {
 
     box.append(el('div', { class: 'card card--flat stack' }, [
       el('div', { class: 'spread' }, [
-        el('h3', { class: 'card__title', text: '一行' }),
+        el('h3', { class: 'card__title', text: label('party', '一行') }),
         el('span', { class: 'tiny faint', text: view.scenario.title }),
       ]),
       partyList(view.party, { onClick: pc => this.openPc(pc.id) }),
@@ -273,7 +343,7 @@ export class SoloScreen {
 
   showSummary(view) {
     const rolls = this.session.log.filter(e => e.roll).length;
-    openSheet('冒険の記録', frag(
+    openSheet(`${label('adventure', '冒険')}の記録`, frag(
       el('div', {}, [
         row('シナリオ', view.scenario.title),
         row('結末', view.ending?.title || '—'),
@@ -281,14 +351,13 @@ export class SoloScreen {
         row('訪れた場面', `${this.session.visited.size} か所`),
         row('経過', `${Math.round((Date.now() - this.session.startedAt) / 60000)} 分`),
       ]),
-      el('h3', { class: 'card__title', style: { marginTop: '14px' }, text: '一行のその後' }),
+      el('h3', { class: 'card__title', style: { marginTop: '14px' }, text: `${label('party', '一行')}のその後` }),
       partyList(view.party),
     ));
   }
 }
 
-/* A small visual cue for what you are fighting, keyed off the monster's kind. */
-const ENEMY_ICONS = { 人型: '👺', 獣: '🐺', 不死: '💀', 巨人: '👹', 精霊: '🌀', 悪魔: '😈' };
+/* A small visual cue for what you are fighting; each world supplies its own. */
 const enemyIcon = kind => ENEMY_ICONS[kind] || '👹';
 
 const row = (k, v) => el('div', { class: 'kv' }, [

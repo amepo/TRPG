@@ -19,7 +19,8 @@
 export const silentBell = {
   id: 'silent-bell',
   title: '鐘の鳴らない村',
-  author: 'WEBtesu TRPG',
+  author: '灯火のテーブル',
+  world: 'embers',
   blurb: '三日前から、ヴェルナ村の鐘が鳴らない。鐘楼には誰もいないのに、縄だけが揺れているという。',
   level: 1,
   length: '短編（40〜60分）',

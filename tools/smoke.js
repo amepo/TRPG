@@ -179,6 +179,8 @@ try {
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await click('シナリオ工房');
     await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();   // 世界観を選ぶ
+    await page.waitForTimeout(200);
     await page.waitForSelector('.issue--ok');
   });
 
@@ -194,6 +196,79 @@ try {
     await page.locator('.node-row').first().click();
     await click('遊ぶ');
     await page.waitForSelector('text=おまかせ4人');
+  });
+
+
+  await step('サイバーパンク：世界が切り替わって配色も変わる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.waitForSelector('text=ネオンの雨');
+    await page.getByRole('button', { name: /雨の領収書/ }).first().click();
+    await page.waitForSelector('text=おまかせ4人');
+    await click('おまかせ4人');
+    await click('この一行で始める');
+    await page.waitForSelector('.line-narration');
+    const world = await page.evaluate(() => document.documentElement.dataset.world);
+    if (world !== 'neon') throw new Error(`世界が切り替わっていない: ${world}`);
+    const bg = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+    if (bg !== '#05070e') throw new Error(`配色が切り替わっていない: ${bg}`);
+  });
+
+  await step('サイバーパンク：役割名が出ている', async () => {
+    const side = await page.locator('.play__side').innerText();
+    if (!/チーム/.test(side)) throw new Error('世界の呼び名が出ていない');
+  });
+
+  await step('サイバーパンク：ネットランに入って追跡ゲージが動く', async () => {
+    /* 街はわざと巡回できる作りなので、素直に先頭を押し続けると永久に回る。
+       目的地に近い選択肢を優先し、無ければ押す位置をずらして進む。 */
+    const WANTED = ['ネットラン', 'タワーへ向かう', '情報屋', 'チップ', '解析'];
+    let rotation = 0;
+
+    for (let i = 0; i < 40; i++) {
+      if (await page.locator('.netrun').count()) break;
+
+      // 戦闘に入ったら片付けてから続ける。
+      if (await page.locator('.combat:not(.netrun)').count()) {
+        const action = page.locator('.action:not([disabled])').first();
+        if (await action.count()) { await action.click(); await page.waitForTimeout(120); await resolveSheet(); }
+        continue;
+      }
+
+      const choices = page.locator('.choice:not([disabled])');
+      const count = await choices.count();
+      if (!count) break;
+
+      let target = null;
+      for (const word of WANTED) {
+        const hit = page.locator('.choice:not([disabled])', { hasText: word });
+        if (await hit.count()) { target = hit.first(); break; }
+      }
+      if (!target) target = choices.nth(rotation++ % count);
+
+      await target.click();
+      await page.waitForTimeout(150);
+      await resolveSheet();
+    }
+
+    if (!await page.locator('.netrun').count()) throw new Error('ネットランに入れなかった');
+    await page.locator('.action--netrun').first().click();
+    await page.waitForTimeout(300);
+    const log = await page.locator('.log').innerText();
+    if (!/追跡|突破|第\d層/.test(log)) throw new Error('侵入のログが出ていない');
+  });
+
+  await step('サイバーパンク：改造で適合度が動く', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    const hasStrain = await page.locator('dialog[open] .strain').count();
+    // 既定の世界はファンタジーなので、改造欄は出ないのが正しい。
+    if (hasStrain) throw new Error('ファンタジーに適合度が出ている');
+    await page.locator('#sheetClose').click();
   });
 
   await step('コンソールエラーが出ていない', async () => {
