@@ -296,8 +296,7 @@ export class Session extends EventTarget {
       if (spec.onFlee?.effects) applyEffects(spec.onFlee.effects, this.ctx());
       if (spec.onFlee?.to) return this.goto(spec.onFlee.to);
     }
-    this.emit('change');
-    return this.view();
+    return this.settle();
   }
 
   /* -------------------------------------------------------------- netrun */
@@ -340,8 +339,33 @@ export class Session extends EventTarget {
       if (spec.onTraced?.effects) applyEffects(spec.onTraced.effects, this.ctx());
       if (spec.onTraced?.text) for (const p of [].concat(spec.onTraced.text)) this.say(interpolate(p, this.ctx()), 'narration');
       // Being traced can hand the job straight to whatever was watching.
-      if (spec.ice?.length) return this.beginCombat({ title: '逆探知', enemies: spec.ice, onVictory: spec.onTraced?.to ? { to: spec.onTraced.to } : undefined });
+      if (spec.ice?.length) {
+        // 勝っても負けても逃げても、逆探知された先に着地させる。行き先を
+        // 欠かすと、選択肢のない場面にプレイヤーが取り残される。
+        const landing = spec.onTraced?.to ? { to: spec.onTraced.to } : undefined;
+        return this.beginCombat({
+          title: '逆探知', enemies: spec.ice,
+          onVictory: landing, onDefeat: spec.onDefeat || landing, onFlee: landing,
+        });
+      }
       if (spec.onTraced?.to) return this.goto(spec.onTraced.to);
+    }
+    return this.settle();
+  }
+
+  /* 戦闘や侵入が終わったのに行き先が示されなかったとき、選択肢のない場面に
+     取り残されると詰む。そこだけは黙って落ちないように拾っておく。 */
+  settle() {
+    const node = this.node;
+    const stranded = !this.finished && !this.combat && !this.netrun
+      && !this.availableChoices().length && !node?.ending;
+    if (stranded) {
+      const fallback = node?.next || node?.combat?.onVictory?.to || node?.netrun?.onSuccess?.to;
+      if (fallback && fallback !== this.nodeId) {
+        this.say('（この場面に留まる理由がなくなった）', 'system');
+        return this.goto(fallback);
+      }
+      this.say('（シナリオの綻び: ここから進む先が用意されていない）', 'error');
     }
     this.emit('change');
     return this.view();

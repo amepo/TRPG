@@ -270,6 +270,11 @@ export function validate(scenario, { monsters = {} } = {}) {
       linkTo(node.combat.onDefeat?.to, `${where}（敗北）`);
       linkTo(node.combat.onFlee?.to, `${where}（逃走）`);
       if (!node.combat.onVictory?.to) warnings.push(`${where}: 勝利後の行き先が未設定です`);
+      // 選択肢のない戦闘場面で敗北・逃走の行き先を欠くと、プレイヤーが
+      // 進めない場面に取り残される。
+      if (!node.choices?.length && !node.combat.onFlee?.to) {
+        warnings.push(`${where}: 逃走後の行き先が未設定で、この場面には選択肢もありません`);
+      }
     }
 
     if (node.netrun) {
@@ -286,6 +291,9 @@ export function validate(scenario, { monsters = {} } = {}) {
       linkTo(node.netrun.onSuccess?.to, `${where}（突破）`);
       linkTo(node.netrun.onTraced?.to, `${where}（逆探知）`);
       if (!node.netrun.onSuccess?.to) warnings.push(`${where}: 突破後の行き先が未設定です`);
+      if (!node.choices?.length && !node.netrun.onTraced?.to) {
+        warnings.push(`${where}: 逆探知後の行き先が未設定で、この場面には選択肢もありません`);
+      }
     }
 
     if (!node.choices?.length && !node.combat && !node.netrun && !node.ending && !node.next) {
