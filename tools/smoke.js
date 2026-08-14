@@ -443,6 +443,40 @@ try {
     if (!sheet.includes('装備')) throw new Error('冒険中に装備欄が消えている');
   });
 
+  await step('技能を押すと、何をする技能か出る', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    await page.locator('.skill').first().click();
+    const help = await page.locator('dialog[open]').innerText();
+    if (help.length < 20) throw new Error(`技能の説明が出ていない: ${help}`);
+    if (!/能力値：/.test(help)) throw new Error('どの能力値で振るのか出ていない');
+    await page.locator('#sheetClose').click();
+  });
+
+  await step('鼠は一体ずつ狙える', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.getByRole('button', { name: /はじめての依頼/ }).click();
+    await click('おまかせ4人');
+    await click('この一行で始める');
+    for (let i = 0; i < 12; i++) {
+      if (await page.locator('.combat').count()) break;
+      const choice = page.locator('.choice:not([disabled])').first();
+      if (!await choice.count()) break;
+      await choice.click();
+      await page.waitForTimeout(160);
+      await resolveSheet();                    // 誰が振るかを訊かれることがある
+    }
+    await page.waitForSelector('.enemy');
+    const names = (await page.locator('.enemy__name').allInnerTexts()).map(t => t.trim());
+    if (names.length < 3) throw new Error(`敵が ${names.length} 体しか出ていない`);
+    if (new Set(names).size !== names.length) throw new Error(`同じ名前で狙い分けられない: ${names.join('、')}`);
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

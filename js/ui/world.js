@@ -6,6 +6,7 @@
 import { el, clear, frag, button, richText, toast } from './dom.js';
 import { WORLDS, useWorld, activeWorld } from '../worlds/index.js';
 import { LORE, rollTable, randomName, hasLore } from '../core/lore.js';
+import { SKILLS, abilityName } from '../core/rules.js';
 import { Rng } from '../core/rng.js';
 
 const rng = new Rng(Date.now());
@@ -31,6 +32,7 @@ export function lorePanel({ withHeader = false } = {}) {
     withHeader ? header(activeWorld()) : null,
     primer(),
     truthsCard(),
+    skillsCard(),
     standingCard(),
     districtsCard(),
     economyCard(),
@@ -93,6 +95,21 @@ const truthsCard = () => (LORE.truths.length ? el('div', { class: 'card stack' }
   ...LORE.truths.map(t => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
     el('div', { style: { fontWeight: '600' }, text: t.title }),
     body(t.text),
+  ])),
+]) : null);
+
+/* 技能。名前と能力値だけ並べても、はじめて遊ぶ人には何ができるか伝わらない。
+   その世界で「何をする技能なのか」を、例まで含めて置く。 */
+const skillsCard = () => (SKILLS.length ? el('div', { class: 'card stack' }, [
+  el('h3', { class: 'card__title', text: '技能' }),
+  el('p', { class: 'tiny faint', text: '判定はこの一覧のどれかで振ります。' }),
+  ...SKILLS.map(s => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
+    el('div', { class: 'spread' }, [
+      el('span', { style: { fontWeight: '600' }, text: s.name }),
+      el('span', { class: 'tiny faint', text: abilityName(s.ability) }),
+    ]),
+    body(s.desc || ''),
+    s.example ? body(s.example, 'tiny faint') : null,
   ])),
 ]) : null);
 

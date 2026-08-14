@@ -18,24 +18,96 @@ const ABILITIES = [
 /* ----------------------------------------------------------------- 技能 */
 
 const SKILLS = [
-  { id: 'athletics', name: '運動', ability: 'str' },
-  { id: 'acrobatics', name: '軽業', ability: 'dex' },
-  { id: 'stealth', name: '隠密', ability: 'dex' },
-  { id: 'sleight', name: '手先の早業', ability: 'dex' },
-  { id: 'arcana', name: '魔法学', ability: 'int' },
-  { id: 'history', name: '歴史', ability: 'int' },
-  { id: 'investigation', name: '捜査', ability: 'int' },
-  { id: 'nature', name: '自然', ability: 'int' },
-  { id: 'religion', name: '宗教', ability: 'int' },
-  { id: 'perception', name: '知覚', ability: 'wis' },
-  { id: 'insight', name: '看破', ability: 'wis' },
-  { id: 'medicine', name: '医術', ability: 'wis' },
-  { id: 'survival', name: '生存', ability: 'wis' },
-  { id: 'animal', name: '動物使い', ability: 'wis' },
-  { id: 'persuasion', name: '説得', ability: 'cha' },
-  { id: 'deception', name: '欺瞞', ability: 'cha' },
-  { id: 'intimidation', name: '威圧', ability: 'cha' },
-  { id: 'performance', name: '芸能', ability: 'cha' },
+  {
+    id: 'athletics', name: '運動', ability: 'str',
+    desc: '登る、泳ぐ、押し破る',
+    example: '扉を体当たりで開ける。崖をよじ登る。組みついた相手を振りほどく',
+  },
+  {
+    id: 'acrobatics', name: '軽業', ability: 'dex',
+    desc: '倒れずに、狭いところを',
+    example: '足場を渡る。転んだ姿勢から素早く立つ。囲みをすり抜ける',
+  },
+  {
+    id: 'stealth', name: '隠密', ability: 'dex',
+    desc: '見つからずに動く',
+    example: '物陰を選ぶ。足音を殺す。見張りの視線が切れる間合いを読む',
+  },
+  {
+    id: 'sleight', name: '手先の早業', ability: 'dex',
+    desc: '指先で誤魔化す',
+    example: '掏る。仕込む。鍵を開ける。相手の目の前で何かを隠す',
+  },
+  {
+    id: 'arcana', name: '魔法学', ability: 'int',
+    desc: '魔法のことを知っている',
+    example: '呪文の痕跡を読む。魔法の品を見分ける。結界の綻びに気づく',
+  },
+  {
+    id: 'history', name: '歴史', ability: 'int',
+    desc: '昔あったことを覚えている',
+    example: '紋章の持ち主。廃墟が誰のものだったか。その戦がいつ終わったか',
+  },
+  {
+    id: 'investigation', name: '捜査', ability: 'int',
+    desc: '物から筋道を立てる',
+    example: '現場を読む。書類の矛盾に気づく。隠し扉のありかを推理する',
+  },
+  {
+    id: 'nature', name: '自然', ability: 'int',
+    desc: '森と天気と獣を読む',
+    example: '空模様から雨の刻を読む。食える草を選ぶ。足跡の主を当てる',
+  },
+  {
+    id: 'religion', name: '宗教', ability: 'int',
+    desc: '信仰と、その裏側',
+    example: '儀式の意味。聖印の出どころ。不死のものが嫌うもの',
+  },
+  {
+    id: 'perception', name: '知覚', ability: 'wis',
+    desc: '気づく',
+    example: '物音。匂い。人の顔色。何かが「さっきと違う」こと',
+  },
+  {
+    id: 'insight', name: '看破', ability: 'wis',
+    desc: '人の腹を読む',
+    example: '嘘を見抜く。言い淀みの理由を察する。本当に困っている人を見分ける',
+  },
+  {
+    id: 'medicine', name: '医術', ability: 'wis',
+    desc: '傷と病を診る',
+    example: '止血する。死因を見立てる。毒か病かを見分ける',
+  },
+  {
+    id: 'survival', name: '生存', ability: 'wis',
+    desc: '野で生きる',
+    example: '道を見つける。追跡する。火を熾す。夜を越す場所を選ぶ',
+  },
+  {
+    id: 'animal', name: '動物使い', ability: 'wis',
+    desc: '獣と渡り合う',
+    example: '馬を落ち着かせる。番犬をなだめる。獣の機嫌を読む',
+  },
+  {
+    id: 'persuasion', name: '説得', ability: 'cha',
+    desc: '筋を通して頼む',
+    example: '交渉する。仲裁する。相手にとっての得を示す',
+  },
+  {
+    id: 'deception', name: '欺瞞', ability: 'cha',
+    desc: '信じさせる',
+    example: '身分を騙る。話を逸らす。動じていないふりをする',
+  },
+  {
+    id: 'intimidation', name: '威圧', ability: 'cha',
+    desc: '引かせる',
+    example: '凄む。事実を突きつける。相手に「割に合わない」と思わせる',
+  },
+  {
+    id: 'performance', name: '芸能', ability: 'cha',
+    desc: '人を惹きつける',
+    example: '歌う。語る。場の空気を持っていく。時間を稼ぐ',
+  },
 ];
 
 const ANCESTRIES = [
@@ -447,13 +519,17 @@ const MONSTERS = {
     attacks: [{ name: '大棍棒', bonus: 6, damage: '2d8+4', type: '打撃' }],
     tactics: 'brute', blurb: '一撃が重い。当たらなければ問題ない。',
   },
-  ratSwarm: {
-    id: 'ratSwarm', name: '鼠の群れ', kind: '獣', cr: 0.25, xp: 50,
-    acOverride: 10, hp: '5d8', hpAvg: 24, speed: 9,
-    abilities: { str: 9, dex: 11, con: 11, int: 2, wis: 10, cha: 3 },
-    attacks: [{ name: '無数の牙', bonus: 2, damage: '2d6', type: '刺突' }],
-    resistances: ['斬撃', '刺突'],
-    tactics: 'brute', blurb: '床が波打っている。床ではない。',
+  /* 群れは「一体で体力の多い塊」ではなく、頭数で出す。どれから倒すかを
+     選べることと、倒すたびに手数が減っていく手応えが、群れの面白さだから。
+     一体にまとめてよいのは、個体を狙う意味が無いもの（蟲の群れなど）だけ。 */
+  direRat: {
+    id: 'direRat', name: '大鼠', kind: '獣', cr: 0.125, xp: 25,
+    acOverride: 12, hp: '2d6', hpAvg: 7, speed: 9,
+    abilities: { str: 10, dex: 13, con: 11, int: 2, wis: 10, cha: 3 },
+    attacks: [{ name: '前歯', bonus: 3, damage: '1d4+1', type: '刺突' }],
+    tactics: 'brute',
+    traits: [{ id: 'cowardly', text: '臆病：半数が倒れ、自分も傷つくと逃げ出す' }],
+    blurb: '犬ほどの大きさがある。噛まれれば、それだけで済む話ではない。',
   },
   guard: {
     id: 'guard', name: '衛兵', kind: '人型', cr: 0.125, xp: 25,
@@ -475,7 +551,10 @@ const MONSTERS = {
 
 const LORE = {
   primer: [
-    'この地方をひとことで言うなら、**灯りの届く範囲だけが人の土地**だ。',
+    'この地方をひとことで言うなら、**灯りの届く範囲だけが人の側の土地**だ。',
+    'ここで言う「人」に、人間だけでなくエルフもドワーフもハーフリングも入る。' +
+    '種族の違いは村の中では話題になるが、日が落ちてからは意味を失う——' +
+    '**外にいるものから見れば、灯りを持って歩く者はみな同じに見える**。',
     '街道は昼のうちだけ安全で、日が落ちれば狼と、狼でないものの領分になる。' +
     '村と村のあいだは半日から二日。その途中には何もない。だから旅人は灯りを持ち、宿を数えて歩く。',
     '王はいる。遠くにいる。税を取りに来る者と、徴兵に来る者の顔しか、ほとんどの人間は知らない。' +

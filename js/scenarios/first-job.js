@@ -86,13 +86,19 @@ export const firstJob = {
 
     fight: {
       id: 'fight', title: '納屋の中', art: '🐀',
-      text: ['床が波打った。床ではない。鼠の群れが、こちらへ雪崩を打って向かってくる。'],
+      text: [
+        '床が波打った。床ではない。**四匹**。どれも犬ほどの大きさがある。',
+        '一度に相手はできない。どれから片づけるかは、こちらが決める。',
+      ],
       combat: {
         title: '納屋の主',
-        enemies: ['ratSwarm'],
+        enemies: ['direRat', 'direRat', 'direRat', 'direRat'],
         surprise: null,
         onVictory: {
-          text: ['最後の一匹が壁の穴へ消えた。納屋は静かになった。'],
+          text: [
+            '残ったのが壁の穴へ消えていった。深手を負っている。あの傷では、明日までもたないだろう。',
+            '納屋は静かになった。藁の上に、こちらの血も少し混じっている。',
+          ],
           to: 'loot',
         },
         onDefeat: {

@@ -73,10 +73,16 @@ export function characterSheet(character, { onChange, canShop = false } = {}) {
     el('span', { class: `chip ${character.saves?.includes(a.id) ? 'is-on' : ''}` },
       [`${a.name} ${signed(view.saveMods[a.id])}`])));
 
+  /* 技能は押すと何をする技能なのかが出る。名前だけ並んでいても、
+     はじめて遊ぶ人には「運動」で何ができるのか分からない。 */
   const skills = el('div', { class: 'skills' }, SKILLS.map(s => {
     const trained = character.skills?.includes(s.id);
     const expert = character.expertise?.includes(s.id);
-    return el('div', { class: `skill ${trained ? 'is-trained' : ''}` }, [
+    return el('button', {
+      class: `skill ${trained ? 'is-trained' : ''}`,
+      title: s.desc || '',
+      onclick: () => openSkillHelp(s, view.skillMods[s.id]),
+    }, [
       el('span', { text: `${s.name}${expert ? '◎' : trained ? '●' : ''}` }),
       el('span', { class: 'skill__mod', text: signed(view.skillMods[s.id]) }),
     ]);
@@ -305,6 +311,15 @@ function describeThing(thing) {
   if (thing.base !== undefined) return `AC ${thing.base}${thing.maxDex !== undefined ? `（敏捷は+${thing.maxDex}まで）` : ''}`;
   if (thing.ac) return `AC +${thing.ac}`;
   return thing.desc || '';
+}
+
+/** その技能で何ができるのか。判定を選ぶ前に読めるように。 */
+export function openSkillHelp(skill, mod) {
+  openSheet(`【${skill.name}】${mod === undefined ? '' : signed(mod)}`, el('div', { class: 'stack' }, [
+    el('p', { text: skill.desc || '' }),
+    skill.example ? el('p', { class: 'muted tiny', style: { lineHeight: '1.8' }, text: skill.example }) : null,
+    el('p', { class: 'tiny faint', text: `能力値：${abilityName(skill.ability)}` }),
+  ]));
 }
 
 const kv = (k, v) => el('div', { class: 'kv' }, [

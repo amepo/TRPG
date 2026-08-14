@@ -321,7 +321,14 @@ a { color: var(--gold); }
 .kv__v { font-variant-numeric: tabular-nums; }
 
 .skills { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
-.skill { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13.5px; border-bottom: 1px dotted var(--line); }
+.skill {
+  display: flex; justify-content: space-between; padding: 5px 0; font-size: 13.5px;
+  border-bottom: 1px dotted var(--line);
+  /* 押せる。押すと何をする技能なのかが出る。 */
+  width: 100%; background: none; border-left: 0; border-right: 0; border-top: 0;
+  color: inherit; font-family: inherit; text-align: left; cursor: pointer;
+}
+.skill:active { background: var(--surface-2, rgba(255,255,255,.06)); }
 .skill.is-trained { color: var(--gold); }
 .skill__mod { font-variant-numeric: tabular-nums; }
 

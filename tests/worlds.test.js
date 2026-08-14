@@ -560,3 +560,40 @@ test('世界を持たない古いデータは、読み込んだ側の世界の�
   const nameless = reviveCharacter({ name: '無名', classId: 'solo', ancestryId: 'street', level: 1 });
   assert.equal(nameless.world, 'neon');
 });
+
+/* ------------------------------------------------------------ 技能の説明 */
+
+/* 名前と能力値だけでは、はじめて遊ぶ人に「運動」で何ができるか伝わらない。
+   遊んだ人からの指摘で足したもの。 */
+test('技能にはすべて説明と例がついている', () => {
+  for (const world of WORLDS) {
+    useWorld(world.id);
+    for (const skill of rules.SKILLS) {
+      assert.ok(skill.desc, `${world.id}/${skill.name}: 説明がない`);
+      assert.ok(skill.example, `${world.id}/${skill.name}: 例がない`);
+      assert.notEqual(skill.desc, skill.name, `${world.id}/${skill.name}: 説明が名前の繰り返し`);
+    }
+  }
+});
+
+/* ------------------------------------------------------------ 群れの出し方 */
+
+/* 「一体で体力の多い塊」ではなく頭数で出す。どれから倒すか選べることと、
+   倒すたびに手数が減る手応えが群れの面白さ、という指摘を受けての形。 */
+test('鼠は一体ずつ出てきて、狙い分けられる', () => {
+  useWorld('embers');
+  const scenario = byId('first-job');
+  const fight = Object.values(scenario.nodes).find(n => n.combat);
+  assert.ok(fight.combat.enemies.length >= 3, `群れが ${fight.combat.enemies.length} 体しかいない`);
+  assert.equal(new Set(fight.combat.enemies).size, 1, '同じ種類で揃っていない');
+
+  const session = new Session({ scenario, party: pregeneratedParty(), seed: 11 });
+  session.start();
+  let guard = 0;
+  while (!session.combat && !session.finished && guard++ < 20) {
+    session.choose(session.view().choices.filter(c => !c.locked)[0].index);
+  }
+  const names = session.view().combat.targets.map(t => t.name);
+  assert.equal(new Set(names).size, names.length, '同じ名前の敵がいて狙い分けられない');
+  assert.ok(names.length >= 3);
+});

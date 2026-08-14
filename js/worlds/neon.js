@@ -20,24 +20,96 @@ const ABILITIES = [
 /* ----------------------------------------------------------------- 技能 */
 
 const SKILLS = [
-  { id: 'athletics', name: '運動', ability: 'str' },
-  { id: 'acrobatics', name: '体術', ability: 'dex' },
-  { id: 'stealth', name: '潜入', ability: 'dex' },
-  { id: 'sleight', name: '手業', ability: 'dex' },
-  { id: 'drive', name: '運転', ability: 'dex' },
-  { id: 'netops', name: '電脳', ability: 'int' },
-  { id: 'tech', name: '技術', ability: 'int' },
-  { id: 'investigation', name: '捜査', ability: 'int' },
-  { id: 'datalore', name: '資料', ability: 'int' },
-  { id: 'corpo', name: '企業儀礼', ability: 'int' },
-  { id: 'perception', name: '知覚', ability: 'wis' },
-  { id: 'insight', name: '看破', ability: 'wis' },
-  { id: 'trauma', name: '応急処置', ability: 'wis' },
-  { id: 'streetwise', name: '街の勘', ability: 'wis' },
-  { id: 'drones', name: 'ドローン', ability: 'wis' },
-  { id: 'persuasion', name: '交渉', ability: 'cha' },
-  { id: 'deception', name: '欺瞞', ability: 'cha' },
-  { id: 'intimidation', name: '威圧', ability: 'cha' },
+  {
+    id: 'athletics', name: '運動', ability: 'str',
+    desc: '走る、登る、押し破る',
+    example: '非常階段を駆け上がる。塀を越える。掴まれた腕を引き剥がす',
+  },
+  {
+    id: 'acrobatics', name: '体術', ability: 'dex',
+    desc: '狭いところを、素早く',
+    example: 'ダクトを抜ける。転倒から立て直す。人混みをすり抜ける',
+  },
+  {
+    id: 'stealth', name: '潜入', ability: 'dex',
+    desc: 'カメラと視線を避ける',
+    example: '死角を選ぶ。巡回の周期を待つ。荷物の陰を伝う',
+  },
+  {
+    id: 'sleight', name: '手業', ability: 'dex',
+    desc: '指先で誤魔化す',
+    example: '掏る。仕込む。物理錠を開ける。相手の目の前でカードをすり替える',
+  },
+  {
+    id: 'drive', name: '運転', ability: 'dex',
+    desc: '走らせる',
+    example: '追跡を振り切る。狭い路地を抜ける。荷を壊さずに運ぶ',
+  },
+  {
+    id: 'netops', name: '電脳', ability: 'int',
+    desc: '電脳をこじ開ける',
+    example: '防壁を抜く。記録を消す。監視系に潜り込む',
+  },
+  {
+    id: 'tech', name: '技術', ability: 'int',
+    desc: '機械を分かっている',
+    example: '端末を開ける。ドローンを黙らせる。配線から用途を読む',
+  },
+  {
+    id: 'investigation', name: '捜査', ability: 'int',
+    desc: '物から筋道を立てる',
+    example: '現場を読む。書類の矛盾に気づく。図面と実物の違いを見抜く',
+  },
+  {
+    id: 'datalore', name: '資料', ability: 'int',
+    desc: '資料を辿る',
+    example: '公開情報から人を特定する。社史の空白に気づく。名簿を突き合わせる',
+  },
+  {
+    id: 'corpo', name: '企業儀礼', ability: 'int',
+    desc: '企業の作法',
+    example: '肩書きと部署名を正しい順序で言う。稟議の通し方を知っている',
+  },
+  {
+    id: 'perception', name: '知覚', ability: 'wis',
+    desc: '気づく',
+    example: '物音。匂い。人の顔色。何かが「さっきと違う」こと',
+  },
+  {
+    id: 'insight', name: '看破', ability: 'wis',
+    desc: '人の腹を読む',
+    example: '嘘を見抜く。言い淀みの理由を察する。雇い主が隠していることを察する',
+  },
+  {
+    id: 'trauma', name: '応急処置', ability: 'wis',
+    desc: 'その場で手当てする',
+    example: '止血する。薬物の作用を読む。死因を見立てる',
+  },
+  {
+    id: 'streetwise', name: '街の勘', ability: 'wis',
+    desc: 'この街での歩き方を知っている',
+    example: '誰に訊けばいいか知っている。相場を外さない。長居してはいけない場所が分かる',
+  },
+  {
+    id: 'drones', name: 'ドローン', ability: 'wis',
+    desc: '無人機を操る',
+    example: '偵察に出す。追わせる。相手のドローンの動きを予測する',
+  },
+  {
+    id: 'persuasion', name: '交渉', ability: 'cha',
+    desc: '筋を通して頼む',
+    example: '交渉する。仲裁する。相手にとっての得を示す',
+  },
+  {
+    id: 'deception', name: '欺瞞', ability: 'cha',
+    desc: '信じさせる',
+    example: '身分を騙る。話を逸らす。動じていないふりをする',
+  },
+  {
+    id: 'intimidation', name: '威圧', ability: 'cha',
+    desc: '引かせる',
+    example: '凄む。事実を突きつける。相手に「割に合わない」と思わせる',
+  },
 ];
 
 /* ----------------------------------------------------------------- 出自 */
