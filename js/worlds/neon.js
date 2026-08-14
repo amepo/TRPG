@@ -44,7 +44,7 @@ const SKILLS = [
 
 const ORIGINS = [
   {
-    id: 'corp', standing: 2,   // 塔の中で生まれた。名前より先に肩書きが通る name: '企業育ち', blurb: '塔の中で生まれた。外の雨を知らずに二十年。',
+    id: 'corp',
     bonus: { int: 2, cha: 1 }, speed: 9,
     traits: [
       { id: 'corpSpeak', text: '社内語：【企業儀礼】を習得' },
@@ -62,7 +62,7 @@ const ORIGINS = [
     grantSkills: ['streetwise'],
   },
   {
-    id: 'nomad', standing: -1,   // 車列の人間は、街の名簿に載っていない name: 'ノマド', blurb: '街の外の砂と風。家族という単位で動く。',
+    id: 'nomad',
     bonus: { con: 2, wis: 1 }, speed: 9,
     traits: [
       { id: 'roadLife', text: '車上生活：【運転】を習得' },
@@ -79,7 +79,7 @@ const ORIGINS = [
     ],
   },
   {
-    id: 'academy', standing: 1,   // 学籍だけは、まだ生きている name: 'アカデミー崩れ', blurb: '学位の一歩手前で追い出された。理由は本人だけが知っている。',
+    id: 'academy',
     bonus: { int: 2, wis: 1 }, speed: 9,
     traits: [
       { id: 'research', text: '基礎研究：【資料】を習得' },
@@ -88,7 +88,7 @@ const ORIGINS = [
     grantSkills: ['datalore'],
   },
   {
-    id: 'synth', standing: -2,   // 規格外の体は、そもそも登録の様式に当てはまらない name: '人造', blurb: '培養槽から出て六年。書類上はまだ製品だ。',
+    id: 'synth',
     bonus: { con: 2, str: 1 }, speed: 9,
     traits: [
       { id: 'syntheticBody', text: '非生物代謝：毒ダメージに免疫、毒状態にならない' },
@@ -751,6 +751,24 @@ const LORE = {
     },
   ],
 
+
+  /* 信用スコア。**設定であって、ルールではない。**
+     段位も、そこで何が起きるかも決めてあるが、数値としては実装していない。
+     持ち物や判定に変換しはじめると、遊ぶ側が管理する項目が一つ増えて
+     卓が重くなる——この街の手触りを出すのに、そこまでは要らない。 */
+  standing: {
+    name: '信用スコア',
+    blurb: 'この街で身分を証明するもの。名前は三つ持っていていいが、スコアが切れたら一つも使えない。'
+      + '宿にも、医者にも、電車にも、まず信用が要る。金はその次だ。',
+    tiers: [
+      { name: '企業級', note: '上層に入れる。名前より肩書きが先に通る。同じものが安く買える' },
+      { name: '良', note: '中層に部屋を持てる。企業地区に入る手続きが通る' },
+      { name: '並', note: '下層で普通に暮らせる。中層は通れるが住めない' },
+      { name: '底', note: '前金を求められる。中層より上には入れない' },
+      { name: '存在しない', note: '宿も医者も断る。地下か外環にしか道がない' },
+    ],
+  },
+
   truths: [
     {
       title: '身分は肉体ではなく信用スコア',
@@ -938,20 +956,6 @@ export const neon = {
     goldUnit: '€$',
     hitDice: '回復リソース',
     strain: '適合度',
-  },
-
-  /* 信用スコア。この街で身分を証明するもの。金より先に効く。
-     priceScale は「同じものがいくらになるか」——低い段位ほど足元を見られる。 */
-  standing: {
-    name: '信用スコア', short: '信用', start: 2,
-    blurb: '名前は三つ持っていていい。スコアが切れたら一つも使えない。',
-    tiers: [
-      { at: 0, name: '存在しない', priceScale: 2.5, note: '宿も医者も断る。地下か外環にしか道がない' },
-      { at: 1, name: '底', priceScale: 1.8, note: '前金を求められる。中層より上には入れない' },
-      { at: 2, name: '並', priceScale: 1, note: '下層で普通に暮らせる。中層は通れるが住めない' },
-      { at: 3, name: '良', priceScale: 0.85, note: '中層に部屋を持てる。企業地区に入る手続きが通る' },
-      { at: 4, name: '企業級', priceScale: 0.6, note: '上層に入れる。名前より肩書きが先に通る' },
-    ],
   },
 
   startingGold: 600,

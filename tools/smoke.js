@@ -356,7 +356,7 @@ try {
     await page.getByText('企業級').first().waitFor();
   });
 
-  await step('信用スコアがキャラクターシートに出る', async () => {
+  await step('信用スコアは世界の読み物にだけ出る（シートには出ない）', async () => {
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await click('セッション支援');
     await page.getByRole('button', { name: /ネオンの雨/ }).first().click();
@@ -364,9 +364,13 @@ try {
     await click('ランダム');
     await page.locator('.pc').first().click();
     await page.waitForSelector('dialog[open] .stats');
-    const body = await page.locator('dialog[open]').innerText();
-    if (!body.includes('信用スコア')) throw new Error('シートに信用スコアが出ていない');
+    const sheet = await page.locator('dialog[open]').innerText();
+    // 管理する項目を増やさない、と決めたので、シートには出さない。
+    if (sheet.includes('信用スコア')) throw new Error('シートに信用スコアが出ている');
     await page.locator('#sheetClose').click();
+
+    await page.getByText('🌍 世界').click();
+    await page.getByText('企業級').first().waitFor();
   });
 
   await step('読み物の **強調** が素通しになっていない', async () => {

@@ -12,7 +12,7 @@ import { onWorld } from '../worlds/index.js';
 
 const EMPTY = {
   primer: [], timeline: [], truths: [], districts: [], places: [], factions: [], figures: [],
-  economy: null, names: { given: [], family: [] }, tables: [],
+  economy: null, standing: null, names: { given: [], family: [] }, tables: [],
 };
 
 export let LORE = EMPTY;

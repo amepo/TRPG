@@ -17,7 +17,6 @@ import {
 } from './content.js';
 import { aggregate, strainUsed, strainCapacity, hasAugments } from './augment.js';
 import { traitPassives } from './traits.js';
-import { startingStanding, clampStanding, hasStanding } from './standing.js';
 import { activeWorld, useWorld, worldById } from '../worlds/index.js';
 
 export const POINT_BUY_BUDGET = 27;
@@ -76,10 +75,6 @@ export function createCharacter(draft = {}) {
     expertise: (draft.expertise || []).slice(0, klass.expertiseChoices || 0),
     saves: [...klass.saves],
     traits: [...(ancestry.traits || [])],
-    // 立場は世界のもの。無い世界では 0 のまま誰も見ない。
-    standing: hasStanding()
-      ? clampStanding(startingStanding() + (ancestry.standing || 0))
-      : 0,
     speed: ancestry.speed,
     hitDie: klass.hitDie,
     conditions: [],
@@ -139,11 +134,8 @@ export function recalculate(character) {
 
   /* 種族から来るものは、作成時に書き込んだきりにしない。書いたきりだと、
      その項目が無かった頃のセーブを読んだときに黙って消える（実際に消えた——
-     エルフが妖精の血を失い、企業育ちが信用スコアを失った）。 */
+     エルフが妖精の血と夜目を失った）。 */
   if (!character.traits) character.traits = [...(ancestry.traits || [])];
-  if (hasStanding() && character.standing === undefined) {
-    character.standing = clampStanding(startingStanding() + (ancestry.standing || 0));
-  }
 
   // 特性の受動効果は、装備と同じく平の数値へ畳み込んでからルール層に渡す。
   const traits = traitPassives(character);

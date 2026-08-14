@@ -8,7 +8,6 @@
 
 import { activeWorld } from '../worlds/index.js';
 import { abilityMod } from './rules.js';
-import { priceScale } from './standing.js';
 
 /** この世界に用意されている改造の一覧。無い世界では空。 */
 export const catalogue = () => Object.values(activeWorld().augments || {});
@@ -50,8 +49,7 @@ export function install(character, id, { free = false } = {}) {
   character.augments = character.augments || [];
   if (character.augments.includes(id)) return { ok: false, reason: 'すでに入っています' };
 
-  // 同じ義体でも、信用のない相手には高く売る。足元を見るのはこの街の作法だ。
-  const price = free ? 0 : Math.round((augment.cost || 0) * priceScale(character));
+  const price = free ? 0 : (augment.cost || 0);
   if (price > (character.gold || 0)) {
     return { ok: false, reason: `資金が足りません（${price} 必要、残り ${character.gold || 0}）` };
   }

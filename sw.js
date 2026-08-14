@@ -20,7 +20,6 @@ const SHELL = [
   './js/core/rng.js',
   './js/core/rules.js',
   './js/core/scenario.js',
-  './js/core/standing.js',
   './js/core/store.js',
   './js/core/traits.js',
   './js/main.js',

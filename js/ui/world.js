@@ -6,7 +6,6 @@
 import { el, clear, frag, button, richText, toast } from './dom.js';
 import { WORLDS, useWorld, activeWorld } from '../worlds/index.js';
 import { LORE, rollTable, randomName, hasLore } from '../core/lore.js';
-import { hasStanding, standingSpec } from '../core/standing.js';
 import { Rng } from '../core/rng.js';
 
 const rng = new Rng(Date.now());
@@ -97,19 +96,16 @@ const truthsCard = () => (LORE.truths.length ? el('div', { class: 'card stack' }
   ])),
 ]) : null);
 
-/* 立場の段位。ここは読み物ではなくルールなので、効果まで並べる。 */
+/* 信用スコア。設定であってルールではないので、数値ではなく「どうなるか」を並べる。 */
 function standingCard() {
-  if (!hasStanding()) return null;
-  const spec = standingSpec();
+  const spec = LORE.standing;
+  if (!spec?.tiers?.length) return null;
   return el('div', { class: 'card stack' }, [
     el('h3', { class: 'card__title', text: spec.name }),
-    spec.blurb ? el('p', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: spec.blurb }) : null,
-    ...[...spec.tiers].reverse().map(t => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
-      el('div', { class: 'spread' }, [
-        el('span', { style: { fontWeight: '600' }, text: `${t.name}（${t.at}）` }),
-        el('span', { class: 'tiny faint', text: `物価 ×${t.priceScale}` }),
-      ]),
-      el('div', { class: 'tiny muted', style: { lineHeight: '1.7' }, text: t.note || '' }),
+    spec.blurb ? body(spec.blurb) : null,
+    ...spec.tiers.map(t => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
+      el('div', { style: { fontWeight: '600' }, text: t.name }),
+      body(t.note || ''),
     ])),
   ]);
 }
