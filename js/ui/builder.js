@@ -13,6 +13,7 @@ import {
 import { ANCESTRIES, CLASSES, BACKGROUNDS, CLASS_SPELLS, spellById, label } from '../core/content.js';
 import { traitList } from '../core/traits.js';
 import { randomName } from '../core/lore.js';
+import { activeWorld, DEFAULT_WORLD } from '../worlds/index.js';
 import { ABILITIES, ABILITY_IDS, abilityMod, SKILLS, skillName } from '../core/rules.js';
 import { Rng } from '../core/rng.js';
 import { listCharacters, putCharacter, deleteCharacter } from '../core/store.js';
@@ -354,7 +355,13 @@ const bonusText = bonus => Object.entries(bonus || {}).map(([k, v]) =>
 /* ---------------------------------------------------------- saved sheet */
 
 export function openSaved(onPick) {
-  const saved = listCharacters();
+  /* 別の世界観の人物は混ぜない。エルフの追跡者をサイバーパンクの卓に置くと、
+     種族もクラスも引けずに表示が崩れる。隠した数だけは知らせる。 */
+  const here = activeWorld().id;
+  const all = listCharacters();
+  const saved = all.filter(c => (c.world || DEFAULT_WORLD) === here);
+  const hidden = all.length - saved.length;
+
   const body = saved.length
     ? el('div', { class: 'party' }, saved.map(data => {
       const pc = reviveCharacter(data);
@@ -375,7 +382,11 @@ export function openSaved(onPick) {
         }, ['削除']),
       ]);
     }))
-    : el('p', { class: 'muted center', text: '保存されたキャラクターはまだありません。' });
+    : el('p', { class: 'muted center', text: `${activeWorld().name} のキャラクターはまだありません。` });
 
-  openSheet('保存済みキャラクター', body);
+  const note = hidden
+    ? el('p', { class: 'tiny faint center', text: `他の世界観のキャラクター ${hidden} 人は、ここには出していません。` })
+    : null;
+
+  openSheet(`保存済みキャラクター（${activeWorld().name}）`, frag(body, note));
 }

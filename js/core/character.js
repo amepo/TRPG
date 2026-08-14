@@ -18,7 +18,7 @@ import {
 import { aggregate, strainUsed, strainCapacity, hasAugments } from './augment.js';
 import { traitPassives } from './traits.js';
 import { startingStanding, clampStanding, hasStanding } from './standing.js';
-import { activeWorld } from '../worlds/index.js';
+import { activeWorld, useWorld, worldById } from '../worlds/index.js';
 
 export const POINT_BUY_BUDGET = 27;
 const POINT_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
@@ -136,6 +136,14 @@ export function recalculate(character) {
   const klass = classById(character.classId);
   const ancestry = ancestryById(character.ancestryId);
   const conMod = abilityMod(character.abilities.con);
+
+  /* 種族から来るものは、作成時に書き込んだきりにしない。書いたきりだと、
+     その項目が無かった頃のセーブを読んだときに黙って消える（実際に消えた——
+     エルフが妖精の血を失い、企業育ちが信用スコアを失った）。 */
+  if (!character.traits) character.traits = [...(ancestry.traits || [])];
+  if (hasStanding() && character.standing === undefined) {
+    character.standing = clampStanding(startingStanding() + (ancestry.standing || 0));
+  }
 
   // 特性の受動効果は、装備と同じく平の数値へ畳み込んでからルール層に渡す。
   const traits = traitPassives(character);
@@ -427,9 +435,23 @@ export function reviveCharacter(data) {
   character.world = character.world || activeWorld().id;
   character.abilities = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(data.abilities || {}) };
   character.level = Math.max(1, Math.min(10, character.level || 1));
-  recalculate(character);
+
+  /* 組み直しは、その人物の世界の目で行う。別の世界が有効なまま計算すると、
+     種族もクラスも引けずに先頭の項目へ落ち、エルフの追跡者が「ソロ」になり、
+     ファンタジーの人物に信用スコアが書き込まれる（実際にそうなっていた）。 */
+  inWorldOf(character, () => recalculate(character));
+
   if (character.hp === undefined || character.hp === null) character.hp = character.maxHp;
   return character;
+}
+
+/** `fn` をその人物の世界で実行し、終わったら元の世界へ戻す。 */
+function inWorldOf(character, fn) {
+  const before = activeWorld().id;
+  const mine = character.world;
+  const switched = mine && mine !== before && worldById(mine);
+  if (switched) useWorld(mine);
+  try { return fn(); } finally { if (switched) useWorld(before); }
 }
 
 /** Full recovery, used between chapters and by the session tool. */

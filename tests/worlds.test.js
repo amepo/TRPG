@@ -5,7 +5,7 @@ import { WORLDS, worldById, useWorld, activeWorld, catalogue, register, DEFAULT_
 import { LORE, hasLore, rollTable, randomName } from '../js/core/lore.js';
 import * as content from '../js/core/content.js';
 import * as rules from '../js/core/rules.js';
-import { createCharacter, pregeneratedParty, recalculate } from '../js/core/character.js';
+import { createCharacter, pregeneratedParty, recalculate, reviveCharacter } from '../js/core/character.js';
 import { Session } from '../js/core/engine.js';
 import { Netrun, APPROACHES } from '../js/core/netrun.js';
 import { validate, applyEffects } from '../js/core/scenario.js';
@@ -532,4 +532,31 @@ test('シナリオの報酬は変数で書ける', () => {
   assert.equal(ctx.party[0].gold, 250);
   applyEffects([{ gold: { var: 'fee', times: 0.4 } }], ctx);
   assert.equal(ctx.party[0].gold, 350);
+});
+
+/* ------------------------------------------------- 世界をまたぐ読み込み */
+
+test('人物は自分の世界の目で組み直される', () => {
+  useWorld('embers');
+  const ranger = createCharacter({
+    name: 'イレーヌ', classId: 'ranger', ancestryId: 'elf', backgroundId: 'trapper',
+  });
+  const saved = JSON.parse(JSON.stringify(ranger));
+
+  // サイバーパンクの卓を開いたまま、ファンタジーの人物を読み込む。
+  useWorld('neon');
+  const loaded = reviveCharacter(saved);
+
+  assert.equal(loaded.world, 'embers');
+  assert.equal(loaded.maxHp, ranger.maxHp, '別の世界の種族で組み直されている');
+  assert.equal(loaded.ac, ranger.ac);
+  assert.deepEqual(loaded.traits, ranger.traits, 'よその世界の特性が混ざった');
+  // 読み込みが卓の世界を書き換えてしまってはいけない。
+  assert.equal(activeWorld().id, 'neon');
+});
+
+test('世界を持たない古いデータは、読み込んだ側の世界のものとして扱う', () => {
+  useWorld('neon');
+  const nameless = reviveCharacter({ name: '無名', classId: 'solo', ancestryId: 'street', level: 1 });
+  assert.equal(nameless.world, 'neon');
 });

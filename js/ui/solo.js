@@ -6,6 +6,7 @@ import { Session } from '../core/engine.js';
 import { skillName } from '../core/rules.js';
 import { label, ENEMY_ICONS } from '../core/content.js';
 import { putSave } from '../core/store.js';
+import { useWorld } from '../worlds/index.js';
 
 export class SoloScreen {
   /**
@@ -31,6 +32,12 @@ export class SoloScreen {
   /* ------------------------------------------------------------- layout */
 
   render() {
+    /* この画面を描くたびに、シナリオの世界へ戻す。「世界」画面やセッション支援で
+       世界を切り替えたまま冒険に帰ってくると、技能名も通貨も変わり、そのシナリオの
+       敵が見つからなくなる（戦闘に入った瞬間に落ちる）。切替は自由でよく、
+       冒険の側が自分の足場を主張するのが正しい。 */
+    useWorld(this.session.world);
+
     clear(this.root).append(el('div', { class: 'play' }, [
       el('div', { class: 'stack' }, [this.logBox, this.choiceBox]),
       this.sideBox,

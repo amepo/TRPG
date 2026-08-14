@@ -459,3 +459,21 @@ test('describe summarises a scenario for the picker', () => {
   assert.ok(summary.checkCount >= 8);
   assert.ok(summary.endingCount >= 3);
 });
+
+/* 「世界」画面やセッション支援は世界を切り替える。冒険に戻ったとき、
+   走っているセッションが別の世界の目で自分を見てしまうと、技能名も通貨も
+   変わり、そのシナリオの敵が引けなくなる（戦闘に入った瞬間に落ちる）。 */
+test('走っているセッションは、自分の世界を覚えている', () => {
+  const scenario = byId('glass-orchard');
+  inWorld(scenario);
+  const session = new Session({ scenario, party: pregeneratedParty(), seed: 1 });
+  session.start();
+  const before = session.view().choices.map(c => c.check?.label);
+
+  useWorld('embers');                       // 別の画面で切り替えられた
+  assert.equal(session.world, 'neon', 'セッションが自分の世界を持っていない');
+
+  useWorld(session.world);                  // 冒険画面が描き直すときにやること
+  assert.deepEqual(session.view().choices.map(c => c.check?.label), before);
+  assert.ok(MONSTERS.corpTrooper, 'この世界の敵が引けない');
+});

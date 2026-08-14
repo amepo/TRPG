@@ -30,7 +30,7 @@
 */
 
 import { label } from './content.js';
-import { adjustStanding, hasStanding, standingSpec, tierOf } from './standing.js';
+import { adjustStanding, hasStanding, standingSpec, tierOf, standingOf } from './standing.js';
 
 /* ------------------------------------------------------------- conditions */
 
@@ -63,7 +63,7 @@ export function testCondition(cond, ctx) {
 
   if (cond.standing !== undefined) {
     // 立場は一行のうち「いちばん通りのいい者」で見る。誰か一人が通れば話は通る。
-    const best = Math.max(0, ...(ctx.party || []).map(pc => pc.standing ?? 0));
+    const best = Math.max(0, ...(ctx.party || []).map(standingOf));
     const want = cond.standing;
     if (typeof want === 'number') return best >= want;
     if (want.gte !== undefined) return best >= want.gte;

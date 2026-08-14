@@ -378,6 +378,23 @@ try {
     if (raw.includes('**')) throw new Error('本文にアスタリスクがそのまま出ている');
   });
 
+  await step('別の世界観のキャラクターは読み込み一覧に出ない', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');                                   // ファンタジーの人物を1人
+    await page.locator('.pc').first().waitFor();
+    await page.getByRole('button', { name: '保存' }).first().click();
+
+    await page.getByRole('button', { name: /ネオンの雨/ }).first().click();
+    await click('読み込む');
+    const sheet = await page.locator('dialog[open]').innerText();
+    if (!/出していません|まだありません/.test(sheet)) {
+      throw new Error(`サイバーパンクの卓にファンタジーの人物が並んでいる:\n${sheet.slice(0, 200)}`);
+    }
+    await page.locator('#sheetClose').click();
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

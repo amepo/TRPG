@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   hasStanding, standingSpec, tierOf, priceScale, adjustStanding,
-  startingStanding, maxStanding, standingLabel,
+  startingStanding, maxStanding, standingLabel, standingOf,
 } from '../js/core/standing.js';
-import { createCharacter, recalculate } from '../js/core/character.js';
+import { createCharacter, recalculate, reviveCharacter } from '../js/core/character.js';
+import { hasTrait } from '../js/core/traits.js';
 import { install } from '../js/core/augment.js';
 import { testCondition, applyEffects, describeCondition } from '../js/core/scenario.js';
 import { skillMod, savingThrow } from '../js/core/rules.js';
@@ -156,4 +157,46 @@ test('区画は上から下まで揃い、下ほど安く、入る条件が書�
   const abyss = LORE.districts.find(d => d.id === 'abyss');
   assert.ok(spire.priceScale > abyss.priceScale, '上層のほうが安くては街の形が逆だ');
   assert.ok(spire.standing > abyss.standing, '上層に入る条件が緩くては困る');
+});
+
+/* ------------------------------------------------- 古いセーブとの付き合い */
+
+/* 種族から来るもの（特性・立場）は作成時に書き込んでいる。書いたきりにすると、
+   その項目が無かった頃のセーブを読んだときに黙って消える。実際に消えた。 */
+const asOldSave = character => {
+  const copy = JSON.parse(JSON.stringify(character));
+  delete copy.standing;
+  delete copy.traits;
+  delete copy.saveAdvantageVs;
+  return copy;
+};
+
+test('立場を持たないセーブを読んでも、出自ぶんの立場が戻る', () => {
+  useWorld('neon');
+  const corp = createCharacter({ name: '企', classId: 'solo', ancestryId: 'corp' });
+  const loaded = reviveCharacter(asOldSave(corp));
+  assert.equal(loaded.standing, corp.standing);
+  // 画面には「企業級」と出るのに扉が開かない、という食い違いが起きていた。
+  assert.equal(
+    testCondition({ standing: { gte: 4 } }, { party: [loaded] }),
+    testCondition({ standing: { gte: 4 } }, { party: [corp] }),
+  );
+});
+
+test('特性を持たないセーブを読んでも、種族特性が戻る', () => {
+  useWorld(DEFAULT_WORLD);
+  const elf = createCharacter({ name: '耳', classId: 'ranger', ancestryId: 'elf' });
+  const loaded = reviveCharacter(asOldSave(elf));
+  assert.equal(loaded.traits.length, elf.traits.length);
+  assert.ok(hasTrait(loaded, 'feyBlood'), '妖精の血が失われている');
+  assert.deepEqual(loaded.saveAdvantageVs, elf.saveAdvantageVs);
+});
+
+test('立場の既定値は、表示側と条件側で食い違わない', () => {
+  useWorld('neon');
+  const nobody = { name: '名無し', abilities: {}, level: 1 };     // standing 未設定
+  const shown = standingLabel(nobody);
+  const value = standingOf(nobody);
+  assert.match(shown, new RegExp(`${value}/`), '表示と判定で別の値を使っている');
+  assert.equal(testCondition({ standing: { gte: value } }, { party: [nobody] }), true);
 });

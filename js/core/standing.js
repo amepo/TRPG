@@ -39,6 +39,18 @@ export function startingStanding() {
   return clampStanding(spec.start ?? Math.floor(maxStanding() / 2));
 }
 
+/**
+ * この人物の立場。世界が立場を持たなければ 0。
+ *
+ * 既定値をここに集めるのが肝心だ。以前は表示側が「未設定なら初期値」、
+ * 条件側が「未設定なら 0」と別々に決めていて、古いセーブを読むと
+ * 画面には「企業級」と出るのに扉は開かない、という食い違いが起きた。
+ */
+export function standingOf(character) {
+  if (!hasStanding()) return 0;
+  return clampStanding(character?.standing ?? startingStanding());
+}
+
 /** その値がどの段位に当たるか。 */
 export function tierOf(value) {
   const spec = standingSpec();
@@ -55,14 +67,14 @@ export function tierOf(value) {
  * 前金を求められる、足元を見られる——それを一つの数にしたもの。
  */
 export function priceScale(character) {
-  return tierOf(character?.standing ?? startingStanding())?.priceScale ?? 1;
+  return tierOf(standingOf(character))?.priceScale ?? 1;
 }
 
 /** 表示用のひとこと。「並（3）」のような形。 */
 export function standingLabel(character) {
   const spec = standingSpec();
   if (!spec) return '';
-  const value = character?.standing ?? startingStanding();
+  const value = standingOf(character);
   return `${tierOf(value)?.name ?? value}（${value}/${maxStanding()}）`;
 }
 
@@ -71,7 +83,7 @@ export function standingLabel(character) {
  * @returns {{before:number, after:number, tier:object|null, changedTier:boolean}}
  */
 export function adjustStanding(character, delta) {
-  const before = clampStanding(character.standing ?? startingStanding());
+  const before = standingOf(character);
   const after = clampStanding(before + delta);
   character.standing = after;
   return {
