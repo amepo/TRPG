@@ -7,11 +7,12 @@
   "scripts": {
     "start": "node tools/serve.js",
     "dev": "node tools/serve.js",
-    "test": "node --test tests/*.test.js",
+    "test": "node tools/lint.js && node --test tests/*.test.js",
     "smoke": "node tools/smoke.js",
     "playtest": "node tools/playtest.js",
     "traits": "node tools/traits-report.js",
     "economy": "node tools/economy.js",
+    "lint": "node tools/lint.js",
     "sync": "node tools/sync.js",
     "new": "node tools/new-scenario.js",
     "build": "node tools/build.js",

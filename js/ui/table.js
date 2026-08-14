@@ -190,7 +190,7 @@ export class TableScreen {
 
       this.characters.length
         ? el('div', { class: 'card stack' }, this.characters.map(pc => el('div', { class: 'stack', style: { gap: '6px' } }, [
-          el('button', { class: 'pc', onclick: () => openCharacterSheet(pc, { onChange: () => this.render() }) }, [
+          el('button', { class: 'pc', onclick: () => openCharacterSheet(pc, { canShop: true, onChange: () => this.render() }) }, [
             el('span', { class: 'pc__face', text: pc.portrait }),
             el('span', { class: 'pc__body' }, [
               el('span', { class: 'pc__name' }, [pc.name, el('span', { class: 'pc__lv', text: `Lv${pc.level} AC${armorClass(pc)}` })]),

@@ -1,12 +1,15 @@
 /* Character sheet rendering, shared by solo play and the session tool. */
 
-import { el, frag, hpBar, signed, openSheet, toast } from './dom.js';
+import { el, frag, hpBar, signed, openSheet, toast, button } from './dom.js';
 import { sheet as buildSheet } from '../core/character.js';
 import { ABILITIES, SKILLS, abilityName, CONDITIONS } from '../core/rules.js';
 import { conditionName } from '../core/combat.js';
 import { spellById, label } from '../core/content.js';
 import { catalogue as augmentCatalogue, summary as augmentSummary, install, remove, hasAugments } from '../core/augment.js';
 import { recalculate } from '../core/character.js';
+import {
+  catalogue as gearCatalogue, loadout, slotFor, thingById, owns, buy, sell, equip, unequip, RESALE,
+} from '../core/gear.js';
 import { traitList } from '../core/traits.js';
 
 /** One row in the party list. */
@@ -37,11 +40,15 @@ export const partyList = (party, opts = {}) =>
   el('div', { class: 'party' }, party.map(pc => partyRow(pc, opts)));
 
 /** The full sheet, rendered into the bottom sheet dialog. */
-export function openCharacterSheet(character, { onChange } = {}) {
-  openSheet(`${character.portrait || '🎲'} ${character.name}`, characterSheet(character, { onChange }));
+/**
+ * @param {object} opts {onChange, canShop} — 買い物は冒険の外だけ。
+ *   洞窟の中で店は開かないし、開くと緊張が消える。
+ */
+export function openCharacterSheet(character, { onChange, canShop = false } = {}) {
+  openSheet(`${character.portrait || '🎲'} ${character.name}`, characterSheet(character, { onChange, canShop }));
 }
 
-export function characterSheet(character, { onChange } = {}) {
+export function characterSheet(character, { onChange, canShop = false } = {}) {
   const view = buildSheet(character);
 
   const abilities = el('div', { class: 'stats' }, ABILITIES.map(a => el('div', { class: 'stat' }, [
@@ -106,9 +113,55 @@ export function characterSheet(character, { onChange } = {}) {
     ]),
   ]) : null;
 
+  /* 装備・持ち物・調達は同じ懐を触るので、どれか一つでも動いたら全部描き直す。 */
+  const refresh = () => {
+    recalculate(character);
+    onChange?.(character);
+    openCharacterSheet(character, { onChange, canShop });
+  };
+  const act = result => {
+    if (!result.ok) { toast(result.reason); return; }
+    refresh();
+  };
+
+  const gearBlock = el('div', {}, loadout(character).map(slot => el('div', { class: 'kv' }, [
+    el('span', { class: 'kv__k', text: `${slot.name}：${slot.item?.name || '—'}` }),
+    el('span', { class: 'row', style: { gap: '4px' } }, [
+      el('button', {
+        class: 'btn btn--sm btn--ghost',
+        onclick: () => openSwap(character, slot, refresh),
+      }, ['持ち替え']),
+      slot.item ? el('button', {
+        class: 'btn btn--sm btn--ghost',
+        onclick: () => act(unequip(character, slot.id)),
+      }, ['外す']) : null,
+    ]),
+  ])));
+
   const inventory = el('div', {}, (character.inventory || []).length
-    ? character.inventory.map(i => kv(`${i.name}${i.count > 1 ? ` ×${i.count}` : ''}`, money(i.cost)))
+    ? character.inventory.map(i => el('div', { class: 'kv' }, [
+      el('span', { class: 'kv__k', text: `${i.name}${i.count > 1 ? ` ×${i.count}` : ''}` }),
+      el('span', { class: 'row', style: { gap: '4px' } }, [
+        slotFor(i) ? el('button', {
+          class: 'btn btn--sm btn--ghost', onclick: () => act(equip(character, i.id)),
+        }, ['装備']) : null,
+        i.cost ? el('button', {
+          class: 'btn btn--sm btn--ghost', onclick: () => act(sell(character, i.id, 1)),
+        }, [`売る ${money(Math.floor(i.cost * RESALE))}`]) : null,
+      ]),
+    ]))
     : [el('p', { class: 'muted tiny', text: '何も持っていない。' })]);
+
+  const shop = canShop
+    ? el('div', { class: 'stack' }, [
+      el('p', { class: 'tiny faint', text: `手持ち ${money(character.gold || 0)}。売ると定価の${Math.round(RESALE * 100)}%。` }),
+      el('div', { class: 'row' }, [
+        button('武器', () => openStore(character, 'weapons', refresh), 'btn btn--sm grow'),
+        button('防具', () => openStore(character, 'armors', refresh), 'btn btn--sm grow'),
+        button('道具', () => openStore(character, 'items', refresh), 'btn btn--sm grow'),
+      ]),
+    ])
+    : null;
 
   const conditions = character.conditions?.length
     ? el('div', { class: 'chips' }, character.conditions.map(c =>
@@ -127,7 +180,9 @@ export function characterSheet(character, { onChange } = {}) {
     hasAugments() ? section(label('strain', '適合度'), augmentBlock(character, onChange)) : null,
     traitList(character).length ? section('種族特性', traits) : null,
     section('クラス特徴', features),
+    section('装備', gearBlock),
     section('持ち物', inventory),
+    shop ? section('調達', shop) : null,
     character.notes ? section('メモ', el('p', { class: 'muted', text: character.notes })) : null,
     onChange ? el('div', { class: 'row', style: { marginTop: '14px' } }, [
       el('button', { class: 'btn btn--sm', onclick: () => adjustHp(character, -1, onChange) }, ['HP −1']),
@@ -197,6 +252,59 @@ function money(cost) {
   const unit = label('goldUnit', '枚');
   const n = cost.toLocaleString('ja-JP');
   return unit === '€$' ? `€$${n}` : `${n} ${unit}`;
+}
+
+/* そのスロットに入れられる持ち物を並べる。持っていないものは出さない——
+   買ってから持ち替える、という順序を崩さないため。 */
+function openSwap(character, slot, refresh) {
+  const mine = (character.inventory || []).filter(i => slotFor(i) === slot.id);
+  openSheet(`${slot.name}を持ち替える`, mine.length
+    ? el('div', { class: 'stack' }, mine.map(i => el('button', {
+      class: 'tile',
+      onclick: () => {
+        const result = equip(character, i.id);
+        if (!result.ok) { toast(result.reason); return; }
+        refresh();
+      },
+    }, [
+      el('div', { class: 'tile__head' }, [el('span', { class: 'tile__name', text: i.name })]),
+      el('div', { class: 'tile__desc', text: describeThing(i) }),
+    ])))
+    : el('p', { class: 'muted center tiny', text: `${slot.name}に入れられるものを持っていない。` }));
+}
+
+/* 店。世界が売っているものを並べる。持っているものには印をつける。 */
+function openStore(character, kind, refresh) {
+  const titles = { weapons: '武器', armors: '防具', items: '道具' };
+  const stock = gearCatalogue()[kind] || [];
+  openSheet(`${titles[kind]}を買う（手持ち ${money(character.gold || 0)}）`,
+    el('div', { class: 'stack' }, stock.map(thing => {
+      const tooDear = (thing.cost || 0) > (character.gold || 0);
+      return el('button', {
+        class: 'tile', disabled: tooDear,
+        style: tooDear ? { opacity: '0.45' } : {},
+        onclick: () => {
+          const result = buy(character, thing.id);
+          if (!result.ok) { toast(result.reason); return; }
+          toast(`${thing.name} を買った`);
+          refresh();
+        },
+      }, [
+        el('div', { class: 'tile__head' }, [
+          el('span', { class: 'tile__name', text: `${owns(character, thing.id) ? '● ' : ''}${thing.name}` }),
+          el('span', { class: 'tiny faint grow', style: { textAlign: 'right' }, text: money(thing.cost) }),
+        ]),
+        el('div', { class: 'tile__desc', text: describeThing(thing) }),
+      ]);
+    })));
+}
+
+/** 品の一行説明。武器はダメージ、防具はAC、道具は説明文。 */
+function describeThing(thing) {
+  if (thing.damage) return `${thing.damage} ${thing.type || ''}　${(thing.tags || []).join('・')}`;
+  if (thing.base !== undefined) return `AC ${thing.base}${thing.maxDex !== undefined ? `（敏捷は+${thing.maxDex}まで）` : ''}`;
+  if (thing.ac) return `AC +${thing.ac}`;
+  return thing.desc || '';
 }
 
 const kv = (k, v) => el('div', { class: 'kv' }, [

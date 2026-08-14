@@ -57,7 +57,7 @@ export function partyScreen(root, { onReady, app, title = '一行を決める' }
         ]),
         el('div', { class: 'party' }, party.map((pc, index) => el('div', { class: 'row', style: { gap: '6px' } }, [
           el('div', { class: 'grow' }, [
-            el('button', { class: 'pc', onclick: () => openCharacterSheet(pc) }, [
+            el('button', { class: 'pc', onclick: () => openCharacterSheet(pc, { canShop: true, onChange: render }) }, [
               el('span', { class: 'pc__face', text: pc.portrait }),
               el('span', { class: 'pc__body' }, [
                 el('span', { class: 'pc__name', text: pc.name }),

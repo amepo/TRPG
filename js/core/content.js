@@ -45,6 +45,9 @@ export const classById = id => CLASSES.find(c => c.id === id) || CLASSES[0];
 export const backgroundById = id => BACKGROUNDS.find(b => b.id === id) || BACKGROUNDS[0];
 export const monsterById = id => MONSTERS[id] || null;
 export const spellById = id => SPELLS[id] || null;
+export const weaponById = id => WEAPONS[id] || null;
+export const armorById = id => ARMORS[id] || null;
+export const itemById = id => ITEMS[id] || null;
 
 /** What a word is called in this setting: label('spell') → 呪文 ／ プログラム */
 export const label = (key, fallback = '') => LABELS[key] ?? fallback;

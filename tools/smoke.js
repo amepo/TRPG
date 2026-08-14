@@ -399,6 +399,50 @@ try {
     await page.locator('#sheetClose').click();
   });
 
+  await step('装備を持ち替えられる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    const before = await page.locator('dialog[open]').innerText();
+    if (!before.includes('装備')) throw new Error('シートに装備欄がない');
+
+    // 盾を外すと、装備欄から消えて持ち物に戻る。
+    const off = page.getByRole('button', { name: '外す' });
+    if (await off.count()) {
+      await off.first().click();
+      const after = await page.locator('dialog[open]').innerText();
+      if (after === before) throw new Error('外しても表示が変わらない');
+    }
+    await page.locator('#sheetClose').click();
+  });
+
+  await step('冒険の外では買い物ができる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByText('📜 キャラクター').click();
+    await click('ランダム');
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    await page.getByRole('button', { name: '道具' }).click();
+    await page.getByText(/を買う（手持ち/).waitFor();
+  });
+
+  await step('冒険の最中は買い物ができない', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.getByRole('button', { name: /はじめての依頼/ }).click();
+    await click('おまかせ4人');
+    await click('この一行で始める');
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    const sheet = await page.locator('dialog[open]').innerText();
+    if (sheet.includes('調達')) throw new Error('冒険の最中に店が開いている');
+    if (!sheet.includes('装備')) throw new Error('冒険中に装備欄が消えている');
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

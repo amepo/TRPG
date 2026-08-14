@@ -85,17 +85,15 @@ test('改造もセーヴの有利をくれる', () => {
   assert.equal(savingThrow(pc, 'con', 12, { rng, vs: 'poisoned' }).mode, 'adv');
 });
 
-test('区画は上から下まで揃い、下ほど安く、入る条件が書いてある', () => {
+test('区画は上から下まで揃い、それぞれ説明が書いてある', () => {
   useWorld('neon');
   assert.ok(LORE.districts.length >= 4, '区画が足りない');
   for (const d of LORE.districts) {
     assert.ok(d.name && d.blurb && d.entry && d.air && d.turf, `${d.id}: 説明が欠けている`);
-    assert.equal(typeof d.priceScale, 'number');
+    // 物価は言葉で書く。実装しない倍率を数字で置くと、また効かない約束になる。
+    assert.equal(typeof d.prices, 'string', `${d.id}: 物価が数字のままになっている`);
+    assert.equal(d.priceScale, undefined, `${d.id}: 効かない倍率が残っている`);
   }
-  const spire = LORE.districts.find(d => d.id === 'spire');
-  const abyss = LORE.districts.find(d => d.id === 'abyss');
-  assert.ok(spire.priceScale > abyss.priceScale, '上層のほうが安くては街の形が逆だ');
-  assert.ok(spire.standing > abyss.standing, '上層に入る条件が緩くては困る');
 });
 
 test('特性を持たないセーブを読んでも、種族特性が戻る', () => {

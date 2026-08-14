@@ -15,6 +15,7 @@ const SHELL = [
   './js/core/content.js',
   './js/core/dice.js',
   './js/core/engine.js',
+  './js/core/gear.js',
   './js/core/lore.js',
   './js/core/netrun.js',
   './js/core/rng.js',

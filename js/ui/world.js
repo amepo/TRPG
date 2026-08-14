@@ -116,12 +116,10 @@ function districtsCard() {
   return el('div', { class: 'card stack' }, [
     el('h3', { class: 'card__title', text: '区画' }),
     ...LORE.districts.map(d => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '12px' } }, [
-      el('div', { class: 'spread' }, [
-        el('span', { style: { fontWeight: '600' }, text: d.name }),
-        el('span', { class: 'tiny faint', text: `物価 ×${d.priceScale}` }),
-      ]),
+      el('div', { style: { fontWeight: '600' }, text: d.name }),
       body(d.blurb),
       el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `空気：${d.air}　／　縄張り：${d.turf}` }),
+      el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `物価：${d.prices}` }),
       el('div', { class: 'tiny faint', style: { lineHeight: '1.7' }, text: `▸ ${d.entry}` }),
     ])),
   ]);
