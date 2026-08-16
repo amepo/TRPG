@@ -34,6 +34,7 @@ const SHELL = [
   './js/scenarios/silent-bell.js',
   './js/scenarios/three-passes.js',
   './js/scenarios/tide-and-bone.js',
+  './js/templates.js',
   './js/ui/builder.js',
   './js/ui/dom.js',
   './js/ui/editor.js',

@@ -70,3 +70,18 @@ test('JSON テンプレートはそのまま読み込める', async () => {
   }
   useWorld(DEFAULT_WORLD);
 });
+
+/* 工房から落とせる見本は、templates/ と同じ中身でなければ意味がない。
+   ずれていたら `npm run sync` を実行する。 */
+test('埋め込みの見本は templates/ と一致する', async () => {
+  const { TEMPLATES } = await import('../js/templates.js');
+  const dir = new URL('../templates/', import.meta.url);
+  const files = (await readdir(dir)).filter(f => f.endsWith('.json')).sort();
+
+  assert.deepEqual(TEMPLATES.map(t => t.file).sort(), files, '埋め込みと templates/ の顔ぶれが違う');
+  for (const template of TEMPLATES) {
+    const onDisk = JSON.parse(await readFile(new URL(template.file, dir), 'utf8'));
+    assert.deepEqual(template.data, onDisk, `${template.file} の中身がずれている`);
+    assert.ok(template.note, `${template.file}: 説明がない`);
+  }
+});

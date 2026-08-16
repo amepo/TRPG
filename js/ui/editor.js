@@ -11,6 +11,7 @@ import {
 import { SKILLS, skillName, DIFFICULTY } from '../core/rules.js';
 import { MONSTERS, encounterDifficulty } from '../core/content.js';
 import { listScenarios, putScenario, deleteScenario, downloadJSON, pickJSON } from '../core/store.js';
+import { TEMPLATES } from '../templates.js';
 import { WORLDS, useWorld, worldById, DEFAULT_WORLD } from '../worlds/index.js';
 
 export class EditorScreen {
@@ -90,6 +91,8 @@ export class EditorScreen {
         ]),
       ]),
 
+      this.templateCard(),
+
       mine.length ? el('div', { class: 'card stack' }, [
         el('h3', { class: 'card__title', text: '保存済み' }),
         ...mine.map(scenario => {
@@ -120,6 +123,41 @@ export class EditorScreen {
         }),
       ]) : el('p', { class: 'muted center tiny', text: 'まだ自作シナリオはありません。' }),
     ]));
+  }
+
+  /* 見本。開いてそのまま書き足してもいいし、JSON を手元に落として
+     好きな編集器で書いてもいい。中身は埋め込んであるので通信は要らない。 */
+  templateCard() {
+    return el('div', { class: 'card stack' }, [
+      el('h3', { class: 'card__title', text: '見本から始める' }),
+      el('p', { class: 'tiny faint', text: '「開く」はそのまま編集に入ります。「.json」は手元に保存して、好きな編集器で書けます。' }),
+      ...TEMPLATES.map(template => el('div', { class: 'row', style: { gap: '6px', alignItems: 'stretch' } }, [
+        el('div', { class: 'grow stack', style: { gap: '2px' } }, [
+          el('div', { style: { fontWeight: '600' }, text: template.data.title || template.key }),
+          el('div', { class: 'tiny faint', style: { lineHeight: '1.6' }, text: template.note }),
+        ]),
+        button('開く', () => this.openTemplate(template), 'btn btn--sm'),
+        button('.json', () => {
+          downloadJSON(template.data, template.file);
+          toast(`${template.file} を保存しました`);
+        }, 'btn btn--sm btn--ghost'),
+      ])),
+    ]);
+  }
+
+  /** 見本を自分のものとして開く。id は振り直す——見本を上書きしないため。 */
+  openTemplate(template) {
+    this.save({ now: true });
+    const copy = normalize(structuredClone(template.data));
+    copy.id = `sc_${Date.now().toString(36)}`;
+    copy.title = `${template.data.title}（写し）`;
+    this.scenario = copy;
+    this.nodeId = copy.start;
+    this.history = [];
+    this.syncWorld();
+    this.save({ now: true });
+    this.render();
+    toast('見本を開きました');
   }
 
   /** A new scenario starts by choosing its setting — it changes everything. */

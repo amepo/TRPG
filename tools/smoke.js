@@ -5,6 +5,7 @@
 
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const PORT = 5199;
@@ -32,7 +33,7 @@ await sleep(700);
 // Honour a pre-provisioned browser when the pinned build is not downloaded.
 const executablePath = process.env.CHROMIUM_PATH || undefined;
 const browser = await chromium.launch({ headless: !headed, executablePath });
-const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+const page = await browser.newPage({ viewport: { width: 420, height: 900 }, acceptDownloads: true });
 
 const consoleErrors = [];
 page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
@@ -515,6 +516,32 @@ try {
     await page.waitForTimeout(200);
     const restored = await page.locator('.node-row').count();
     if (restored !== before) throw new Error(`戻っていない（${before} → ${deleted} → ${restored}）`);
+  });
+
+  await step('工房：見本の JSON を落とせる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await page.getByText('見本から始める').waitFor();
+
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: '.json' }).first().click();
+    const file = await download;
+    const name = file.suggestedFilename();
+    if (!name.endsWith('.json')) throw new Error(`落ちてきたのが json ではない: ${name}`);
+
+    // 中身がシナリオとして読める形かどうかまで見る。
+    const path = await file.path();
+    const data = JSON.parse(await readFile(path, 'utf8'));
+    if (!data.nodes || !data.start) throw new Error('落ちてきた JSON が シナリオの形をしていない');
+  });
+
+  await step('工房：見本を開くと、そのまま編集に入れる', async () => {
+    await page.getByRole('button', { name: '開く' }).first().click();
+    await page.locator('.node-row').first().waitFor();
+    const rows = await page.locator('.node-row').count();
+    if (rows < 2) throw new Error(`場面が ${rows} しか入っていない`);
+    const title = await page.locator('.input').first().inputValue();
+    if (!title.includes('写し')) throw new Error(`見本そのものを開いている: ${title}`);
   });
 
   await step('コンソールエラーが出ていない', async () => {

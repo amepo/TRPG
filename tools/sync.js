@@ -63,6 +63,46 @@ export const catalogue = () => BUILT_IN.map(s => {
 `;
 await writeFile(join(ROOT, 'js/scenarios/index.js'), indexSource);
 
+/* ------------------------------------------------------- js/templates.js */
+
+/* templates/*.json をそのまま JS に埋め込む。工房から落とせるようにするのに、
+   通信を挟みたくない——このアプリはオフラインで動くのが前提なので。 */
+const templateFiles = (await readdir(join(ROOT, 'templates')))
+  .filter(f => f.endsWith('.json')).sort();
+
+const ORDER = ['annotated', 'linear', 'hub', 'clock', 'route'];
+const rank = f => {
+  const at = ORDER.indexOf(f.replace('.json', ''));
+  return at === -1 ? ORDER.length : at;
+};
+templateFiles.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+
+const NOTES = {
+  annotated: '使える書き方の全部入り。まずこれを開くのがいちばん早い',
+  linear: '一本道。判定と戦闘を一度ずつ',
+  hub: '拠点から複数の調査先へ。手がかりが揃うと次へ',
+  clock: '変数が上限に達すると場面が強制的に変わる',
+  route: '複数の道のうち二区間を通って目的地へ',
+};
+
+const templates = [];
+for (const file of templateFiles) {
+  const data = JSON.parse(await readFile(join(ROOT, 'templates', file), 'utf8'));
+  const key = file.replace('.json', '');
+  templates.push({ file, key, data, note: NOTES[key] || '' });
+}
+
+const templateSource = `/* 自動生成 — \`npm run sync\` が templates/*.json から作ります。手で編集しない。
+
+   工房から見本を落とせるようにするためのもの。通信を挟まずに済むよう、
+   中身をそのまま埋め込んである（このアプリはオフラインで動くのが前提）。 */
+
+export const TEMPLATES = ${JSON.stringify(templates, null, 2)};
+
+export const templateByKey = key => TEMPLATES.find(t => t.key === key) || null;
+`;
+await writeFile(join(ROOT, 'js/templates.js'), templateSource);
+
 /* --------------------------------------------------------------- sw.js */
 
 /* js/ の下にある全ファイルを列挙し、プリキャッシュ一覧を作り直す。 */
