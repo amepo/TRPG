@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { validate } from '../js/core/scenario.js';
+import { useWorld, DEFAULT_WORLD } from '../js/worlds/index.js';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -51,4 +53,20 @@ test('すべてのシナリオが必要な項目を備えている', () => {
     const endings = Object.values(s.nodes).filter(n => n.ending);
     assert.ok(endings.length >= 2, `${s.id}: 結末が ${endings.length} 個しかない`);
   }
+});
+
+/* テンプレートは工房の「JSONを読み込む」に投げるもの。壊れていたら意味がない。 */
+test('JSON テンプレートはそのまま読み込める', async () => {
+  const dir = new URL('../templates/', import.meta.url);
+  const files = (await readdir(dir)).filter(f => f.endsWith('.json'));
+  assert.ok(files.length >= 5, `テンプレートが ${files.length} 個しかない`);
+
+  for (const file of files) {
+    const data = JSON.parse(await readFile(new URL(file, dir), 'utf8'));
+    useWorld(data.world || DEFAULT_WORLD);
+    const { MONSTERS } = await import('../js/core/content.js');
+    const result = validate(data, { monsters: MONSTERS });
+    assert.equal(result.ok, true, `${file}:\n${(result.errors || []).join('\n')}`);
+  }
+  useWorld(DEFAULT_WORLD);
 });

@@ -57,7 +57,7 @@ export const firstJob = {
             skill: 'perception', dc: 10,
             success: {
               text: [
-                '暗がりに、光る目が四つ。鼠だ——ただし、犬ほどの大きさの群れ。',
+                '暗がりに、光る目が八つ。四匹だ。鼠——ただし、犬ほどの大きさの。',
                 '奥の梁に、古い麻袋が引っかかっているのも見えた。',
               ],
               effects: [{ setFlag: 'scouted' }],

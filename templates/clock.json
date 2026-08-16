@@ -1,0 +1,269 @@
+{
+  "id": "clock",
+  "title": "clock 型の見本",
+  "author": "灯火のテーブル",
+  "world": "embers",
+  "blurb": "TODO: 一行のあらすじ",
+  "level": 1,
+  "length": "短編（30〜45分）",
+  "start": "plan",
+  "vars": {
+    "clock": 0,
+    "prep": 0
+  },
+  "nodes": {
+    "plan": {
+      "id": "plan",
+      "title": "下見",
+      "art": "🔭",
+      "text": [
+        "TODO: 下見の場面。重ねるほど本番が楽になる。"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 下見A",
+          "once": true,
+          "check": {
+            "skill": "perception",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO"
+              ],
+              "effects": [
+                {
+                  "var": "prep",
+                  "add": 1
+                },
+                {
+                  "setFlag": "prepA"
+                }
+              ],
+              "to": "plan"
+            },
+            "fail": {
+              "text": [
+                "TODO"
+              ],
+              "to": "plan"
+            }
+          }
+        },
+        {
+          "text": "TODO: 下見B",
+          "once": true,
+          "check": {
+            "skill": "investigation",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO"
+              ],
+              "effects": [
+                {
+                  "var": "prep",
+                  "add": 1
+                },
+                {
+                  "setFlag": "prepB"
+                }
+              ],
+              "to": "plan"
+            },
+            "fail": {
+              "text": [
+                "TODO"
+              ],
+              "to": "plan"
+            }
+          }
+        },
+        {
+          "text": "本番へ",
+          "to": "run"
+        }
+      ]
+    },
+    "run": {
+      "id": "run",
+      "title": "本番",
+      "art": "🕑",
+      "text": [
+        "TODO: ここから時計が進む。"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 静かな手（下見が要る）",
+          "requires": {
+            "flag": "prepA"
+          },
+          "lockedText": "TODO: 下見していない",
+          "effects": [
+            {
+              "var": "clock",
+              "add": 1
+            }
+          ],
+          "to": "target"
+        },
+        {
+          "text": "TODO: 強引な手",
+          "effects": [
+            {
+              "var": "clock",
+              "add": 2
+            }
+          ],
+          "to": "target"
+        }
+      ]
+    },
+    "target": {
+      "id": "target",
+      "title": "目的地",
+      "art": "🔐",
+      "text": [
+        "TODO: 目的の場面。時間との勝負。"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 慎重にやる",
+          "effects": [
+            {
+              "var": "clock",
+              "add": 2
+            }
+          ],
+          "check": {
+            "skill": "investigation",
+            "dc": 14,
+            "success": {
+              "text": [
+                "TODO: 成功"
+              ],
+              "to": "escape"
+            },
+            "fail": {
+              "text": [
+                "TODO: 失敗"
+              ],
+              "effects": [
+                {
+                  "var": "clock",
+                  "add": 1
+                }
+              ],
+              "to": "target"
+            }
+          }
+        },
+        {
+          "text": "TODO: 時間切れが近い。引く",
+          "if": {
+            "var": "clock",
+            "gte": 6
+          },
+          "to": "timeUp"
+        }
+      ]
+    },
+    "escape": {
+      "id": "escape",
+      "title": "脱出",
+      "art": "🏃",
+      "text": [
+        "TODO: 戻り道"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 逃げ切る",
+          "if": {
+            "var": "clock",
+            "lte": 7
+          },
+          "to": "endGood"
+        },
+        {
+          "text": "TODO: 間に合わない",
+          "if": {
+            "var": "clock",
+            "gte": 8
+          },
+          "to": "timeUp"
+        }
+      ]
+    },
+    "timeUp": {
+      "id": "timeUp",
+      "title": "時間切れ",
+      "art": "⏱️",
+      "text": [
+        "TODO: 時間が尽きた場面"
+      ],
+      "combat": {
+        "title": "TODO",
+        "enemies": [
+          "bandit",
+          "bandit"
+        ],
+        "onVictory": {
+          "text": [
+            "TODO"
+          ],
+          "to": "endPlain"
+        },
+        "onDefeat": {
+          "to": "endBad"
+        },
+        "onFlee": {
+          "to": "endBad"
+        }
+      }
+    },
+    "endGood": {
+      "id": "endGood",
+      "title": "TODO 良い結末",
+      "art": "🌅",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "good",
+        "title": "TODO 良い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endPlain": {
+      "id": "endPlain",
+      "title": "TODO ひとつの結末",
+      "art": "🚶",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "neutral",
+        "title": "TODO ひとつの結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endBad": {
+      "id": "endBad",
+      "title": "TODO 苦い結末",
+      "art": "🩸",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "bad",
+        "title": "TODO 苦い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    }
+  }
+}

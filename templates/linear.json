@@ -1,0 +1,176 @@
+{
+  "id": "linear",
+  "title": "linear 型の見本",
+  "author": "灯火のテーブル",
+  "world": "embers",
+  "blurb": "TODO: 一行のあらすじ",
+  "level": 1,
+  "length": "短編（30〜45分）",
+  "start": "start",
+  "vars": {},
+  "nodes": {
+    "start": {
+      "id": "start",
+      "title": "導入",
+      "art": "📋",
+      "text": [
+        "ここに情景。何を頼まれたのかを一段落で。",
+        "——TODO: 導入の本文"
+      ],
+      "choices": [
+        {
+          "text": "引き受ける",
+          "to": "approach"
+        },
+        {
+          "text": "相手の様子を窺う",
+          "once": true,
+          "check": {
+            "skill": "insight",
+            "dc": 11,
+            "success": {
+              "text": [
+                "TODO: 見抜いたこと"
+              ],
+              "effects": [
+                {
+                  "setFlag": "sawThrough"
+                }
+              ],
+              "to": "approach"
+            },
+            "fail": {
+              "text": [
+                "TODO: 読めなかった"
+              ],
+              "to": "approach"
+            }
+          }
+        }
+      ]
+    },
+    "approach": {
+      "id": "approach",
+      "title": "現場",
+      "art": "🚪",
+      "text": [
+        "TODO: 現場の描写。障害が一つ見えている。"
+      ],
+      "choices": [
+        {
+          "text": "静かに入る",
+          "check": {
+            "skill": "stealth",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO: 抜けた"
+              ],
+              "to": "core"
+            },
+            "fail": {
+              "text": [
+                "TODO: 見つかった"
+              ],
+              "to": "fight"
+            }
+          }
+        },
+        {
+          "text": "正面から入る",
+          "to": "fight"
+        }
+      ]
+    },
+    "fight": {
+      "id": "fight",
+      "title": "衝突",
+      "art": "⚔️",
+      "text": [
+        "TODO: 戦闘に入る一行"
+      ],
+      "combat": {
+        "title": "TODO",
+        "enemies": [
+          "bandit",
+          "bandit"
+        ],
+        "onVictory": {
+          "text": [
+            "TODO: 勝った後"
+          ],
+          "to": "core"
+        },
+        "onDefeat": {
+          "to": "endBad"
+        },
+        "onFlee": {
+          "to": "endBad"
+        }
+      }
+    },
+    "core": {
+      "id": "core",
+      "title": "核心",
+      "art": "🔍",
+      "text": [
+        "TODO: ここで一番の情報か物が手に入る。"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 良い側の選択",
+          "to": "endGood"
+        },
+        {
+          "text": "TODO: 割り切る側の選択",
+          "to": "endPlain"
+        }
+      ]
+    },
+    "endGood": {
+      "id": "endGood",
+      "title": "TODO 良い結末",
+      "art": "🌅",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "good",
+        "title": "TODO 良い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endPlain": {
+      "id": "endPlain",
+      "title": "TODO ひとつの結末",
+      "art": "🚶",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "neutral",
+        "title": "TODO ひとつの結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endBad": {
+      "id": "endBad",
+      "title": "TODO 苦い結末",
+      "art": "🩸",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "bad",
+        "title": "TODO 苦い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    }
+  }
+}

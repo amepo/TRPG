@@ -1,0 +1,309 @@
+{
+  "id": "hub",
+  "title": "hub 型の見本",
+  "author": "灯火のテーブル",
+  "world": "embers",
+  "blurb": "TODO: 一行のあらすじ",
+  "level": 1,
+  "length": "短編（30〜45分）",
+  "start": "start",
+  "vars": {
+    "clues": 0
+  },
+  "nodes": {
+    "start": {
+      "id": "start",
+      "title": "依頼",
+      "art": "📋",
+      "text": [
+        "TODO: 依頼を受ける場面。"
+      ],
+      "choices": [
+        {
+          "text": "引き受ける",
+          "to": "hub"
+        }
+      ]
+    },
+    "hub": {
+      "id": "hub",
+      "title": "拠点",
+      "art": "🏙️",
+      "text": [
+        "TODO: 調べられる先が三つ。",
+        "（手がかりが揃うと次へ進める）"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 調査先A",
+          "to": "leadA"
+        },
+        {
+          "text": "TODO: 調査先B",
+          "to": "leadB"
+        },
+        {
+          "text": "TODO: 調査先C",
+          "to": "leadC"
+        },
+        {
+          "text": "TODO: 核心へ向かう",
+          "requires": {
+            "var": "clues",
+            "gte": 2
+          },
+          "lockedText": "まだ手がかりが足りない",
+          "to": "core"
+        },
+        {
+          "text": "TODO: 手がかりがないまま踏み込む",
+          "if": {
+            "var": "clues",
+            "lte": 1
+          },
+          "effects": [
+            {
+              "log": "TODO: 代償の一行",
+              "kind": "bad"
+            }
+          ],
+          "to": "core"
+        }
+      ]
+    },
+    "leadA": {
+      "id": "leadA",
+      "title": "TODO 調査先A",
+      "art": "🔍",
+      "text": [
+        "TODO: 調査先Aの描写"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 調べる",
+          "once": true,
+          "check": {
+            "skill": "perception",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO: 分かったこと"
+              ],
+              "effects": [
+                {
+                  "var": "clues",
+                  "add": 1
+                },
+                {
+                  "setFlag": "leadA"
+                }
+              ],
+              "to": "hub"
+            },
+            "fail": {
+              "text": [
+                "TODO: 空振り"
+              ],
+              "to": "hub"
+            }
+          }
+        },
+        {
+          "text": "拠点に戻る",
+          "to": "hub"
+        }
+      ]
+    },
+    "leadB": {
+      "id": "leadB",
+      "title": "TODO 調査先B",
+      "art": "🔍",
+      "text": [
+        "TODO: 調査先Bの描写"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 調べる",
+          "once": true,
+          "check": {
+            "skill": "persuasion",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO: 分かったこと"
+              ],
+              "effects": [
+                {
+                  "var": "clues",
+                  "add": 1
+                },
+                {
+                  "setFlag": "leadB"
+                }
+              ],
+              "to": "hub"
+            },
+            "fail": {
+              "text": [
+                "TODO: 空振り"
+              ],
+              "to": "hub"
+            }
+          }
+        },
+        {
+          "text": "拠点に戻る",
+          "to": "hub"
+        }
+      ]
+    },
+    "leadC": {
+      "id": "leadC",
+      "title": "TODO 調査先C",
+      "art": "🔍",
+      "text": [
+        "TODO: 調査先Cの描写"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 調べる",
+          "once": true,
+          "check": {
+            "skill": "investigation",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO: 分かったこと"
+              ],
+              "effects": [
+                {
+                  "var": "clues",
+                  "add": 1
+                },
+                {
+                  "setFlag": "leadC"
+                }
+              ],
+              "to": "hub"
+            },
+            "fail": {
+              "text": [
+                "TODO: 空振り"
+              ],
+              "to": "hub"
+            }
+          }
+        },
+        {
+          "text": "拠点に戻る",
+          "to": "hub"
+        }
+      ]
+    },
+    "core": {
+      "id": "core",
+      "title": "核心",
+      "art": "🕯️",
+      "text": [
+        "TODO: 真相が見える場面。"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 対決する",
+          "to": "fight"
+        },
+        {
+          "text": "TODO: 話し合う",
+          "check": {
+            "skill": "persuasion",
+            "dc": 14,
+            "success": {
+              "text": [
+                "TODO: 通じた"
+              ],
+              "to": "endGood"
+            },
+            "fail": {
+              "text": [
+                "TODO: 通じなかった"
+              ],
+              "to": "fight"
+            }
+          }
+        }
+      ]
+    },
+    "fight": {
+      "id": "fight",
+      "title": "対決",
+      "art": "⚔️",
+      "text": [
+        "TODO: 戦闘に入る一行"
+      ],
+      "combat": {
+        "title": "TODO",
+        "enemies": [
+          "bandit",
+          "bandit"
+        ],
+        "onVictory": {
+          "text": [
+            "TODO: 勝った後"
+          ],
+          "to": "endPlain"
+        },
+        "onDefeat": {
+          "to": "endBad"
+        },
+        "onFlee": {
+          "to": "endBad"
+        }
+      }
+    },
+    "endGood": {
+      "id": "endGood",
+      "title": "TODO 良い結末",
+      "art": "🌅",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "good",
+        "title": "TODO 良い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endPlain": {
+      "id": "endPlain",
+      "title": "TODO ひとつの結末",
+      "art": "🚶",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "neutral",
+        "title": "TODO ひとつの結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endBad": {
+      "id": "endBad",
+      "title": "TODO 苦い結末",
+      "art": "🩸",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "bad",
+        "title": "TODO 苦い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    }
+  }
+}

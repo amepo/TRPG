@@ -477,6 +477,46 @@ try {
     if (new Set(names).size !== names.length) throw new Error(`同じ名前で狙い分けられない: ${names.join('、')}`);
   });
 
+  await step('工房：保存を押さなくても、書いたものは残る', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();
+    await page.waitForSelector('.issue--ok');
+
+    // 名前をつけて、場面を3つ足す。保存は押さない。
+    const title = page.locator('.input').first();
+    await title.fill('消えないかの試験');
+    for (let i = 0; i < 3; i++) {
+      await click('＋ 場面を足す');
+      await page.waitForTimeout(120);
+    }
+    const rows = await page.locator('.node-row').count();
+
+    await click('一覧へ');
+    await page.getByText('消えないかの試験').first().waitFor();
+
+    await page.getByText('消えないかの試験').first().click();
+    // 場面を足したあとは点検に警告が出るので、.issue--ok は当てにできない。
+    await page.locator('.node-row').first().waitFor();
+    const after = await page.locator('.node-row').count();
+    if (after !== rows) throw new Error(`場面が ${rows} → ${after} に減っている`);
+  });
+
+  await step('工房：削除した場面を元に戻せる', async () => {
+    const before = await page.locator('.node-row').count();
+    await click('削除');
+    await page.locator('dialog[open]').getByRole('button', { name: '削除' }).click();
+    await page.waitForTimeout(200);
+    const deleted = await page.locator('.node-row').count();
+    if (deleted >= before) throw new Error('削除できていない');
+
+    await page.getByRole('button', { name: /元に戻す/ }).click();
+    await page.waitForTimeout(200);
+    const restored = await page.locator('.node-row').count();
+    if (restored !== before) throw new Error(`戻っていない（${before} → ${deleted} → ${restored}）`);
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

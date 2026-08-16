@@ -12,8 +12,9 @@
      clock   時間制限。変数が上限に達すると強制的に場面が変わる
      route   経路選択。複数の道のうち二区間を通って目的地へ */
 
-import { writeFile, access } from 'node:fs/promises';
+import { writeFile, access, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const args = process.argv.slice(2);
@@ -304,6 +305,19 @@ ${SHAPES[shape]().join('\n\n')}
 
 export default ${varName};
 `;
+
+/* --json を渡すと、工房が読み込める JSON として書き出す。
+   骨組みは同じものを使う——見本が本体とずれると意味がないので。 */
+if (opt('json') !== undefined || process.argv.includes('--json')) {
+  const temp = join(ROOT, 'templates', `.${id}.tmp.mjs`);
+  await writeFile(temp, source);
+  const { default: scenario } = await import(pathToFileURL(temp).href);
+  await rm(temp);
+  const out = join(ROOT, 'templates', `${id}.json`);
+  await writeFile(out, `${JSON.stringify(scenario, null, 2)}\n`);
+  console.log(`templates/${id}.json を作りました（${shape} 型）`);
+  process.exit(0);
+}
 
 const path = join(ROOT, 'js/scenarios', `${id}.js`);
 try {

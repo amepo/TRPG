@@ -1,0 +1,287 @@
+{
+  "id": "route",
+  "title": "route 型の見本",
+  "author": "灯火のテーブル",
+  "world": "embers",
+  "blurb": "TODO: 一行のあらすじ",
+  "level": 1,
+  "length": "短編（30〜45分）",
+  "start": "start",
+  "vars": {
+    "pursuit": 0,
+    "legs": 0
+  },
+  "nodes": {
+    "start": {
+      "id": "start",
+      "title": "出発",
+      "art": "🚗",
+      "text": [
+        "TODO: 出発の場面。"
+      ],
+      "choices": [
+        {
+          "text": "出す",
+          "to": "route"
+        }
+      ]
+    },
+    "route": {
+      "id": "route",
+      "title": "道を選ぶ",
+      "art": "🗺️",
+      "text": [
+        "TODO: 道が三つ。それぞれ危険が違う。"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 道A",
+          "to": "legA"
+        },
+        {
+          "text": "TODO: 道B",
+          "to": "legB"
+        },
+        {
+          "text": "TODO: 道C",
+          "to": "legC"
+        }
+      ]
+    },
+    "legA": {
+      "id": "legA",
+      "title": "TODO 道A",
+      "art": "🛣️",
+      "text": [
+        "TODO: 道Aの描写"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 切り抜ける",
+          "check": {
+            "skill": "stealth",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO: 抜けた"
+              ],
+              "to": "waypoint"
+            },
+            "fail": {
+              "text": [
+                "TODO: 捕まった"
+              ],
+              "effects": [
+                {
+                  "var": "pursuit",
+                  "add": 1
+                }
+              ],
+              "to": "trouble"
+            }
+          }
+        }
+      ]
+    },
+    "legB": {
+      "id": "legB",
+      "title": "TODO 道B",
+      "art": "🛣️",
+      "text": [
+        "TODO: 道Bの描写"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 切り抜ける",
+          "check": {
+            "skill": "persuasion",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO: 抜けた"
+              ],
+              "to": "waypoint"
+            },
+            "fail": {
+              "text": [
+                "TODO: 捕まった"
+              ],
+              "effects": [
+                {
+                  "var": "pursuit",
+                  "add": 1
+                }
+              ],
+              "to": "trouble"
+            }
+          }
+        }
+      ]
+    },
+    "legC": {
+      "id": "legC",
+      "title": "TODO 道C",
+      "art": "🛣️",
+      "text": [
+        "TODO: 道Cの描写"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 切り抜ける",
+          "check": {
+            "skill": "perception",
+            "dc": 12,
+            "success": {
+              "text": [
+                "TODO: 抜けた"
+              ],
+              "to": "waypoint"
+            },
+            "fail": {
+              "text": [
+                "TODO: 捕まった"
+              ],
+              "effects": [
+                {
+                  "var": "pursuit",
+                  "add": 1
+                }
+              ],
+              "to": "trouble"
+            }
+          }
+        }
+      ]
+    },
+    "trouble": {
+      "id": "trouble",
+      "title": "道中の衝突",
+      "art": "⚔️",
+      "text": [
+        "TODO: 戦闘に入る一行"
+      ],
+      "combat": {
+        "title": "TODO",
+        "enemies": [
+          "bandit",
+          "bandit"
+        ],
+        "onVictory": {
+          "text": [
+            "TODO"
+          ],
+          "to": "waypoint"
+        },
+        "onDefeat": {
+          "to": "endBad"
+        },
+        "onFlee": {
+          "effects": [
+            {
+              "var": "pursuit",
+              "add": 1
+            }
+          ],
+          "to": "waypoint"
+        }
+      }
+    },
+    "waypoint": {
+      "id": "waypoint",
+      "title": "一度止まる",
+      "art": "🚙",
+      "text": [
+        "TODO: 中継点。もう一区間ある。"
+      ],
+      "onEnter": [
+        {
+          "var": "legs",
+          "add": 1
+        }
+      ],
+      "repeatEffects": true,
+      "choices": [
+        {
+          "text": "次の区間へ——別の道に乗り換える",
+          "if": {
+            "var": "legs",
+            "lte": 1
+          },
+          "to": "route"
+        },
+        {
+          "text": "目的地へ",
+          "requires": {
+            "var": "legs",
+            "gte": 2
+          },
+          "lockedText": "まだ一区間ある",
+          "to": "arrival"
+        }
+      ]
+    },
+    "arrival": {
+      "id": "arrival",
+      "title": "到着",
+      "art": "🌅",
+      "text": [
+        "TODO: 目的地の場面。"
+      ],
+      "choices": [
+        {
+          "text": "TODO: 良い側の選択",
+          "to": "endGood"
+        },
+        {
+          "text": "TODO: 割り切る側の選択",
+          "to": "endPlain"
+        }
+      ]
+    },
+    "endGood": {
+      "id": "endGood",
+      "title": "TODO 良い結末",
+      "art": "🌅",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "good",
+        "title": "TODO 良い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endPlain": {
+      "id": "endPlain",
+      "title": "TODO ひとつの結末",
+      "art": "🚶",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "neutral",
+        "title": "TODO ひとつの結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    },
+    "endBad": {
+      "id": "endBad",
+      "title": "TODO 苦い結末",
+      "art": "🩸",
+      "text": [
+        "TODO: 結末の一段落"
+      ],
+      "ending": {
+        "type": "bad",
+        "title": "TODO 苦い結末",
+        "text": [
+          "TODO: 締めの一行"
+        ]
+      }
+    }
+  }
+}

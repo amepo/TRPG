@@ -1,0 +1,208 @@
+{
+  "_comment": "すべての書き方の見本。_ で始まるキーはエンジンが読み飛ばすので、メモとして残せる。",
+  "id": "sample-annotated",
+  "title": "見本：使える書き方ぜんぶ",
+  "author": "あなたの名前",
+  "world": "embers",
+  "_world": "embers（剣と魔法）か neon（サイバーパンク）。技能・装備・敵が入れ替わる",
+  "blurb": "一覧に出る、短い惹句。",
+  "level": 1,
+  "length": "短編（10〜15分）",
+  "start": "intro",
+  "_start": "最初に開く場面の id",
+  "vars": {
+    "trust": 0,
+    "fee": 30
+  },
+  "_vars": "数えたいもの。条件と効果から読み書きし、本文には {var:trust} で差し込める",
+  "items": {
+    "letter": {
+      "id": "letter",
+      "name": "封書",
+      "desc": "宛名がない。"
+    }
+  },
+  "_items": "このシナリオだけの持ち物。世界の道具は id を書くだけで使える",
+  "monsters": {
+    "strayDog": {
+      "name": "野良犬",
+      "kind": "獣",
+      "cr": 0.125,
+      "xp": 25,
+      "acOverride": 12,
+      "hp": "2d6",
+      "hpAvg": 7,
+      "speed": 12,
+      "abilities": {
+        "str": 10,
+        "dex": 13,
+        "con": 11,
+        "int": 3,
+        "wis": 12,
+        "cha": 6
+      },
+      "attacks": [
+        {
+          "name": "噛みつき",
+          "bonus": 3,
+          "damage": "1d4+1",
+          "type": "刺突"
+        }
+      ],
+      "tactics": "brute",
+      "blurb": "痩せている。"
+    }
+  },
+  "_monsters": "このシナリオだけの敵。世界の敵は id を書くだけで出せる",
+  "nodes": {
+    "intro": {
+      "id": "intro",
+      "title": "場面の見出し",
+      "art": "🏚️",
+      "_art": "絵文字ひとつ。ログの見出しにつく",
+      "text": [
+        "一行が一段落になる。",
+        "{name} は一行の先頭の名前、{party} は一行そのもの。"
+      ],
+      "onEnter": [
+        {
+          "giveItem": "letter"
+        },
+        {
+          "var": "trust",
+          "add": 1,
+          "note": "（信頼が少し上がった）"
+        },
+        {
+          "if": {
+            "var": "trust",
+            "gte": 1
+          },
+          "log": "条件つきの効果も書ける。",
+          "kind": "good"
+        }
+      ],
+      "_onEnter": "その場面に入ったとき一度だけ走る。repeatEffects: true で毎回走る",
+      "choices": [
+        {
+          "text": "そのまま進む",
+          "to": "check"
+        },
+        {
+          "text": "持ち物が要る道",
+          "requires": {
+            "has": "letter"
+          },
+          "lockedText": "封書がない",
+          "_requires": "満たさないと灰色で表示される。if: にすると条件を満たすまで見えない",
+          "to": "check"
+        }
+      ]
+    },
+    "check": {
+      "id": "check",
+      "title": "判定のある場面",
+      "text": [
+        "判定は 1d20 + 技能。DC 以上で成功。"
+      ],
+      "choices": [
+        {
+          "text": "説得してみる",
+          "once": true,
+          "_once": "一度選ぶと消える",
+          "check": {
+            "skill": "persuasion",
+            "dc": 12,
+            "advantageIf": {
+              "classIn": [
+                "cleric"
+              ]
+            },
+            "_advantageIf": "条件を満たすと有利（2個振って高いほう）",
+            "success": {
+              "text": [
+                "通った。"
+              ],
+              "effects": [
+                {
+                  "var": "trust",
+                  "add": 2
+                }
+              ],
+              "to": "fight"
+            },
+            "fail": {
+              "text": [
+                "取りつく島もない。"
+              ],
+              "to": "fight"
+            }
+          }
+        }
+      ]
+    },
+    "fight": {
+      "id": "fight",
+      "title": "戦闘のある場面",
+      "text": [
+        "群れは頭数で出す。どれから倒すか選べるほうが面白い。"
+      ],
+      "combat": {
+        "title": "路地の番犬",
+        "enemies": [
+          "strayDog",
+          "strayDog"
+        ],
+        "_enemies": "同じ id を並べると Ａ Ｂ と名前がつく",
+        "surprise": null,
+        "_surprise": "'party' なら先手、'enemy' なら不意打ちされる",
+        "onVictory": {
+          "text": [
+            "犬は退いた。"
+          ],
+          "effects": [
+            {
+              "xp": 50
+            }
+          ],
+          "to": "ending"
+        },
+        "onDefeat": {
+          "text": [
+            "地面に転がった。"
+          ],
+          "to": "ending"
+        },
+        "onFlee": {
+          "to": "ending"
+        }
+      }
+    },
+    "ending": {
+      "id": "ending",
+      "title": "結末",
+      "text": [
+        "結末の場面に入ると物語は終わる。"
+      ],
+      "onEnter": [
+        {
+          "gold": {
+            "var": "fee"
+          }
+        }
+      ],
+      "_onEnter2": "報酬は変数でも書ける。{ gold: 30 } のように直に書いてもよい",
+      "ending": {
+        "type": "good",
+        "_type": "good / neutral / bad",
+        "title": "一覧に出る結末の名前",
+        "text": [
+          "締めの文章。",
+          "{party} で一行の名前が入る。"
+        ],
+        "noPay": false,
+        "_noPay": "報酬を払わないことに意味がある結末だけ true にする"
+      }
+    }
+  }
+}
