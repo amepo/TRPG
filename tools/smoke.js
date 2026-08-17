@@ -544,6 +544,51 @@ try {
     if (!title.includes('写し')) throw new Error(`見本そのものを開いている: ${title}`);
   });
 
+  await step('工房：効果と条件を書ける', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();
+    await page.waitForSelector('.issue--ok');
+
+    const fold = name => page.locator('.fold').filter({ hasText: name }).first();
+
+    // 変数をひとつ宣言する。
+    await fold('変数').locator('summary').click();
+    await click('＋ 変数を足す');
+    await page.waitForTimeout(150);
+    if (!/count/.test(await fold('変数').innerText())) throw new Error('変数が足せない');
+
+    // 選択肢に「所持金」の効果を足す。閉じた details の中は押せないので開いてから。
+    const effects = fold('選んだときの効果');
+    await effects.locator('summary').click();
+    await page.locator('.fold[open] .select--add-effect').first().selectOption('gold');
+    await page.waitForTimeout(200);
+    if (!/所持金/.test(await fold('選んだときの効果').innerText())) {
+      throw new Error('効果が入っていない');
+    }
+
+    // 見せる条件に「印がある」を足す。
+    const cond = fold('見せる条件');
+    await cond.locator('summary').click();
+    await page.locator('.fold[open] .select--add-condition').first().selectOption('flag');
+    await page.waitForTimeout(200);
+    if (!/印/.test(await fold('見せる条件').innerText())) throw new Error('条件が入っていない');
+  });
+
+  await step('工房：書いた効果ごと遊べる', async () => {
+    await click('遊ぶ');
+    await click('おまかせ4人');            // 遊ぶ前に一行を決める画面が挟まる
+    await click('この一行で始める');
+    await page.locator('.log__line').first().waitFor();
+
+    // 「印がある」を条件にした選択肢は、印がついていないので出ないのが正しい。
+    const choices = await page.locator('.choice').count();
+    const log = await page.locator('.log__line').count();
+    if (!log) throw new Error('自作シナリオが始まらない');
+    if (choices) throw new Error(`条件を満たしていない選択肢が出ている（${choices}件）`);
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

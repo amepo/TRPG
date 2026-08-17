@@ -417,3 +417,16 @@ a { color: var(--gold); }
 /* -------------------------------------------------------------- worlds */
 
 .world-tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-dim); }
+
+/* ------------------------------------------------ 工房の折りたたみ */
+
+/* 効果と条件は、書いていないときは畳んでおく。20場面ぶん常に開いていると
+   本文が見えなくなるが、中身があるときは要約が出るので閉じていても分かる。 */
+.fold {
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; margin-top: 8px; background: var(--surface-2, transparent);
+}
+.fold > summary { cursor: pointer; list-style: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: '▸ '; color: var(--ink-dim); }
+.fold[open] > summary::before { content: '▾ '; }

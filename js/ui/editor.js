@@ -9,9 +9,12 @@ import {
   blankScenario, validate, describe, normalize,
 } from '../core/scenario.js';
 import { SKILLS, skillName, DIFFICULTY } from '../core/rules.js';
-import { MONSTERS, encounterDifficulty } from '../core/content.js';
+import { MONSTERS, ITEMS, encounterDifficulty } from '../core/content.js';
 import { listScenarios, putScenario, deleteScenario, downloadJSON, pickJSON } from '../core/store.js';
 import { TEMPLATES } from '../templates.js';
+import {
+  effectsEditor, conditionEditor, describeEffect, describeConditionShort,
+} from './effects.js';
 import { WORLDS, useWorld, worldById, DEFAULT_WORLD } from '../worlds/index.js';
 
 export class EditorScreen {
@@ -28,6 +31,29 @@ export class EditorScreen {
     this.saveTimer = null;
     this.syncWorld();
     this.render();
+  }
+
+  /* 効果と条件の編集に渡す文脈。打ち間違えると黙って効かなくなるので、
+     すでに使われている名前を候補として出す。 */
+  editCtx() {
+    const vars = Object.keys(this.scenario.vars || {});
+    const items = [...new Set([...Object.keys(this.scenario.items || {}), ...Object.keys(ITEMS)])];
+    return {
+      vars, items,
+      onMark: () => this.mark(),
+      onChange: () => { this.save(); this.render(); },
+    };
+  }
+
+  /* 効果や条件の箱。たたんでおいて、中身があれば要約を出す。 */
+  foldable(title, summary, body) {
+    return el('details', { class: 'fold', open: !!summary }, [
+      el('summary', {}, [
+        el('span', { class: 'tiny', style: { fontWeight: '600' }, text: title }),
+        el('span', { class: 'tiny faint', style: { marginLeft: '6px' }, text: summary || 'なし' }),
+      ]),
+      el('div', { class: 'stack', style: { marginTop: '8px' } }, [body]),
+    ]);
   }
 
   /** 変える直前に呼ぶ。ここまでの姿を積み、あとで戻せるようにする。 */
@@ -242,6 +268,48 @@ export class EditorScreen {
         class: 'input', value: s.title,
         oninput: e => { s.title = e.target.value; this.typed(); },
       })),
+      /* 変数はここで宣言する。効果や条件から名前で参照するので、
+         先に一覧があるほうが打ち間違えない。 */
+      this.foldable(
+        '変数',
+        Object.entries(s.vars || {}).map(([k, v]) => `${k}=${v}`).join('、'),
+        frag(
+          el('p', { class: 'tiny faint', text: '数えたいもの。効果で動かし、条件で見て、本文には {var:名前} で差し込めます。' }),
+          ...Object.entries(s.vars || {}).map(([name, value]) => el('div', { class: 'row', style: { gap: '6px' } }, [
+            el('div', { class: 'grow' }, [el('input', {
+              class: 'input', value: name,
+              onchange: e => {
+                const next = e.target.value.trim();
+                if (!next || next === name) return;
+                this.mark();
+                const kept = s.vars[name];
+                delete s.vars[name];
+                s.vars[next] = kept;
+                this.save();
+                this.render();
+              },
+            })]),
+            el('div', { style: { width: '90px' } }, [el('input', {
+              class: 'input', type: 'number', value: value,
+              oninput: e => { s.vars[name] = Number(e.target.value) || 0; this.typed(); },
+            })]),
+            el('button', {
+              class: 'btn btn--sm btn--danger',
+              onclick: () => { this.mark(); delete s.vars[name]; this.save(); this.render(); },
+            }, ['×']),
+          ])),
+          button('＋ 変数を足す', () => {
+            this.mark();
+            s.vars = s.vars || {};
+            let name = 'count';
+            for (let i = 2; s.vars[name] !== undefined; i++) name = `count${i}`;
+            s.vars[name] = 0;
+            this.save();
+            this.render();
+          }, 'btn btn--sm'),
+        ),
+      ),
+
       field('あらすじ', el('textarea', {
         class: 'textarea', value: s.blurb || '',
         oninput: e => { s.blurb = e.target.value; this.typed(); },
@@ -353,6 +421,22 @@ export class EditorScreen {
       })),
 
       el('hr', { class: 'divider' }),
+      this.foldable(
+        'この場面に入ったとき',
+        (node.onEnter || []).map(describeEffect).join('、'),
+        frag(
+          effectsEditor(node.onEnter = node.onEnter || [], this.editCtx()),
+          el('label', { class: 'chip', style: { marginTop: '6px' } }, [
+            el('input', {
+              type: 'checkbox', checked: !!node.repeatEffects,
+              onchange: e => { this.mark(); node.repeatEffects = e.target.checked || undefined; update(); },
+            }),
+            ' 来るたびに毎回はたらく（既定は初回だけ）',
+          ]),
+        ),
+      ),
+
+      el('hr', { class: 'divider' }),
       this.choicesBlock(node, update),
       el('hr', { class: 'divider' }),
       this.combatBlock(node, update),
@@ -445,6 +529,15 @@ export class EditorScreen {
                 choice.check.success = { ...(choice.check.success || {}), text: e.target.value.split('\n').filter(Boolean) };
               },
             })),
+            this.foldable(
+              '成功したときの効果',
+              (choice.check.success?.effects || []).map(describeEffect).join('、'),
+              effectsEditor(
+                (choice.check.success = choice.check.success || {}).effects
+                  = choice.check.success.effects || [],
+                this.editCtx(),
+              ),
+            ),
             field('失敗したら', nodeOptions(choice.check.fail?.to, v => {
               choice.check.fail = { ...(choice.check.fail || {}), to: v };
             })),
@@ -457,6 +550,43 @@ export class EditorScreen {
             })),
           ])
           : field('行き先', nodeOptions(choice.to, v => { choice.to = v; })),
+
+        /* 選んだときの効果と、出す／開く条件。ここが無いあいだ、
+           自作シナリオは状態を持てなかった。 */
+        this.foldable(
+          '選んだときの効果',
+          (choice.effects || []).map(describeEffect).join('、'),
+          effectsEditor(choice.effects = choice.effects || [], this.editCtx()),
+        ),
+        this.foldable(
+          '見せる条件',
+          describeConditionShort(choice.if),
+          frag(
+            el('p', { class: 'tiny faint', text: '満たすまで、この選択肢は現れません。' }),
+            conditionEditor(choice.if, next => {
+              choice.if = next;
+              this.save();
+              this.render();
+            }, this.editCtx()),
+          ),
+        ),
+        this.foldable(
+          '開く条件',
+          describeConditionShort(choice.requires),
+          frag(
+            el('p', { class: 'tiny faint', text: '見えてはいるが、満たすまで押せません。' }),
+            conditionEditor(choice.requires, next => {
+              choice.requires = next;
+              this.save();
+              this.render();
+            }, this.editCtx()),
+            choice.requires ? field('押せない理由', el('input', {
+              class: 'input', value: choice.lockedText || '',
+              placeholder: describeConditionShort(choice.requires),
+              oninput: e => { choice.lockedText = e.target.value || undefined; this.typed(); },
+            })) : null,
+          ),
+        ),
       ])),
     ]);
   }

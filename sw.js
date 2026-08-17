@@ -38,6 +38,7 @@ const SHELL = [
   './js/ui/builder.js',
   './js/ui/dom.js',
   './js/ui/editor.js',
+  './js/ui/effects.js',
   './js/ui/home.js',
   './js/ui/sheet.js',
   './js/ui/solo.js',
