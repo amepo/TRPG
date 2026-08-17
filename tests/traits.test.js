@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { TRAITS, traitList, traitPassives, hasTrait, normalizeTrait } from '../js/core/traits.js';
+import {
+  TRAITS, traitList, traitPassives, hasTrait, normalizeTrait, traitTurnStart, traitAttackMods,
+} from '../js/core/traits.js';
+import { BUILT_IN } from '../js/scenarios/index.js';
 import { Combat, spawnMonster } from '../js/core/combat.js';
 import { createCharacter, skillBudget } from '../js/core/character.js';
 import { addCondition, applyDamage, check, savingThrow, hasCondition } from '../js/core/rules.js';
@@ -296,4 +299,38 @@ test('竜の吐息は戦闘の行動として選べ、使い切ると消える',
   combat.doTrait(dragon, { id: 'dragonBreath' });
   assert.ok(combat.enemies.reduce((s, e) => s + e.hp, 0) < totalBefore, '範囲攻撃が当たっていない');
   assert.equal(has(), false, '使い切ったら選べない');
+});
+
+/* ------------------------------------------------- シナリオが持つ敵 */
+
+/* 収録シナリオの敵は、素の文字列で特性を名乗っていた——「HPが半分を切ると
+   降参する」「1度だけダメージを半減する」。どれも一度も効いていなかった。
+   点検の道具が世界データしか見ていなかったからで、穴はそのまま溜まっていた。 */
+test('シナリオが持つ敵の特性も、すべて実装されている', () => {
+  for (const scenario of BUILT_IN) {
+    for (const [id, monster] of Object.entries(scenario.monsters || {})) {
+      for (const trait of traitList(monster)) {
+        assert.ok(trait.id,
+          `${scenario.id}/${monster.name || id}: 「${trait.text}」に id がない（素の文字列は効かない）`);
+        assert.ok(TRAITS[trait.id],
+          `${scenario.id}/${monster.name || id}: 特性 ${trait.id} が実装されていない`);
+      }
+    }
+  }
+});
+
+/* 半分を切ったら降りる。仲間の有無を見ないところが cowardly と違う。 */
+test('板挟みは、一人でも半分を切れば降参する', () => {
+  const alone = { name: '職長', hp: 10, maxHp: 27, traits: [{ id: 'standDown' }] };
+  const [event] = traitTurnStart({ self: alone, combat: null });
+  assert.ok(event?.flee, '半分を切っても降りない');
+
+  const fresh = { name: '職長', hp: 20, maxHp: 27, traits: [{ id: 'standDown' }] };
+  assert.equal(traitTurnStart({ self: fresh, combat: null }).length, 0, '元気なうちから降りている');
+});
+
+test('長期戦に弱い相手は、3ラウンド目から不利になる', () => {
+  const tired = { name: '主任', traits: [{ id: 'tiring' }] };
+  assert.equal(traitAttackMods({ self: tired, combat: { round: 2 } }).disadvantage, false);
+  assert.equal(traitAttackMods({ self: tired, combat: { round: 3 } }).disadvantage, true);
 });

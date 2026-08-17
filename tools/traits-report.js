@@ -1,11 +1,17 @@
 /* 特性の点検 — 「宣言されている特性が、実際に効くか」を一覧にする。
 
-   世界データが宣言した特性を全部拾い、定義の有無と種類を並べる。
+   世界データとシナリオが宣言した特性を全部拾い、定義の有無と種類を並べる。
    実装漏れ（id が TRAITS に無い）と、描写のみのものを見分けるための道具。
+
+   シナリオ側も見る。ここを世界データだけにしていたあいだ、収録シナリオの
+   敵が素の文字列で7件も特性を名乗っていた——「HPが半分を切ると降参する」
+   「1度だけダメージを半減する」。どれも一度も効いていなかった。
+   点検の穴は、穴のあるところにそのまま溜まる。
 
      node tools/traits-report.js */
 
 import { WORLDS } from '../js/worlds/index.js';
+import { BUILT_IN } from '../js/scenarios/index.js';
 import { TRAITS, traitList } from '../js/core/traits.js';
 
 const KIND_LABEL = {
@@ -16,20 +22,22 @@ const KIND_LABEL = {
 };
 
 const rows = [];
+const collect = (world, group, owner, entity) => {
+  for (const trait of traitList(entity)) {
+    rows.push({ world, group, owner, id: trait.id, text: trait.text, kind: trait.def?.kind || null });
+  }
+};
+
 for (const world of Object.values(WORLDS)) {
   for (const [group, label] of [['ancestries', '種族/出自'], ['monsters', '敵']]) {
-    for (const entity of Object.values(world[group] || {})) {
-      for (const trait of traitList(entity)) {
-        rows.push({
-          world: world.id,
-          group: label,
-          owner: entity.name,
-          id: trait.id,
-          text: trait.text,
-          kind: trait.def?.kind || null,
-        });
-      }
-    }
+    for (const entity of Object.values(world[group] || {})) collect(world.id, label, entity.name, entity);
+  }
+}
+
+/* シナリオが自前で持っている敵。世界の敵と同じ土俵で見る。 */
+for (const scenario of BUILT_IN) {
+  for (const [id, monster] of Object.entries(scenario.monsters || {})) {
+    collect(scenario.world || 'embers', `敵（${scenario.title}）`, monster.name || id, monster);
   }
 }
 
@@ -44,7 +52,7 @@ for (const world of Object.values(WORLDS)) {
   console.log(`■ ${world.icon || ''} ${world.name}  (${mine.length}件)`);
   let owner = null;
   for (const r of mine) {
-    if (r.owner !== owner) { owner = r.owner; console.log(`  ${owner}`); }
+    if (r.owner !== owner) { owner = r.owner; console.log(`  ${owner}${r.group.startsWith('敵（') ? ` ${r.group}` : ''}`); }
     const mark = !r.id || !TRAITS[r.id] ? '✗ 未実装' : `${KIND_LABEL[r.kind] || r.kind}`;
     console.log(`    [${String(mark).padEnd(4)}] ${r.text}`);
   }

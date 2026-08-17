@@ -30,7 +30,9 @@ export const tideAndBone = {
       attacks: [{ name: '膨れた手', bonus: 4, damage: '1d8+2', type: '打撃' }],
       resistances: ['刺突'],
       tactics: 'brute',
-      traits: ['水を吐く：倒れるとき周囲に海水を撒く'],
+      /* 「倒れるとき周囲に海水を撒く」と書いてあったが、そういう仕組みは無い。
+         ルールのように読める文を残すより、描写に直す。 */
+      traits: [{ id: 'brine', text: '水を吐く：口の端から海水がこぼれ続けている' }],
       blurb: '制服の名残がまだ肩に張りついている。二十年、ここで待っていた。',
     },
   },

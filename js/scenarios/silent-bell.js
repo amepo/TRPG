@@ -52,7 +52,7 @@ export const silentBell = {
         { name: '儀式の刃', bonus: 3, damage: '1d4+1', type: '刺突' },
       ],
       tactics: 'caster',
-      traits: ['闇の加護：1度だけ受けたダメージを半減する'],
+      traits: [{ id: 'wardOnce', text: '闇の加護：1度だけ受けたダメージを半減する' }],
       blurb: '穏やかな声のまま、目だけが笑っていない。',
     },
   },

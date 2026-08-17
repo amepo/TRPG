@@ -30,8 +30,10 @@ export const blackout = {
       acOverride: 15, hp: '5d8+5', hpAvg: 27, speed: 9,
       abilities: { str: 13, dex: 14, con: 13, int: 11, wis: 14, cha: 11 },
       attacks: [{ name: '支給拳銃', bonus: 4, damage: '1d8+2', type: '実弾', ranged: true }],
-      tactics: 'skirmish',
-      traits: ['報告優先：戦うより通報を選ぶ'],
+      tactics: 'skirmish', backupId: 'secGuard',
+      /* 「戦うより通報を選ぶ」と書いてあったが、素の文字列だったので何も
+         起きていなかった。書いてある通り、応援を呼ぶようにする。 */
+      traits: [{ id: 'callBackup', text: '報告優先：3ラウンド生き残ると応援を1人呼ぶ' }],
       blurb: '定年まであと三年。誰よりも死にたくない側の人間だ。',
     },
   },

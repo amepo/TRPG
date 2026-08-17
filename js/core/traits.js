@@ -181,6 +181,25 @@ export const TRAITS = {
     },
   },
 
+  standDown: {
+    name: '降参', kind: 'combat',
+    /* 臆病（cowardly）とは条件が違う。あちらは「味方が減ってきたら逃げる」で、
+       仲間のいない相手には効かない。こちらは一人でも降りる——雇われて立って
+       いるだけの相手が、半分削られて続ける理由はない。 */
+    turnStart: ({ self }) => {
+      if (self.hp > self.maxHp / 2) return null;
+      return { flee: true, text: `${self.name}は武器を下ろした。「もういい。……もういいんだ」` };
+    },
+  },
+
+  tiring: {
+    name: '長期戦に弱い', kind: 'combat',
+    /* 長引くほど狙いが落ちる。ラウンド3から不利。 */
+    attack: ({ combat }) => ((combat?.round || 0) >= 3
+      ? { disadvantage: true, note: '手元が狂いはじめている' }
+      : null),
+  },
+
   undeadFortitude: {
     name: '不死の頑健さ', kind: 'combat',
     survive: ({ self, save }) => {
@@ -301,6 +320,9 @@ export const TRAITS = {
   emplaced: { name: '固定', kind: 'flavor' },
   netOnly: { name: '電脳内のみ', kind: 'flavor' },
   nonStandard: { name: '規格外', kind: 'flavor' },
+  justMachine: { name: '作業機械', kind: 'flavor' },
+  noncombatant: { name: '非戦闘員', kind: 'flavor' },
+  brine: { name: '水を吐く', kind: 'flavor' },
 };
 
 /** 出目1を振り直せるか。使い切りは呼び出し側が luckUsed で管理する。 */

@@ -30,7 +30,7 @@ export const lastRide = {
       abilities: { str: 9, dex: 11, con: 10, int: 16, wis: 14, cha: 13 },
       attacks: [{ name: '護身用スプレー', bonus: 2, damage: '1d4', type: '毒' }],
       tactics: 'skirmish',
-      traits: ['非戦闘員：守る対象'],
+      traits: [{ id: 'noncombatant', text: '非戦闘員：守る対象' }],
       blurb: '会計士。四十一歳。数字を読むのが仕事で、読みすぎた。',
     },
     interceptor: {

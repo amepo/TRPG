@@ -32,7 +32,7 @@ export const glassOrchard = {
       abilities: { str: 12, dex: 14, con: 14, int: 3, wis: 10, cha: 1 },
       attacks: [{ name: '高圧ノズル', bonus: 4, damage: '1d8+2', type: '酸', ranged: true }],
       tactics: 'skirmish',
-      traits: ['作業機械：命令されて飛んでいるだけで、悪意はない'],
+      traits: [{ id: 'justMachine', text: '作業機械：命令されて飛んでいるだけで、悪意はない' }],
       blurb: '農薬を撒くために作られた。撒くものが変わっても、飛び方は変わらない。',
     },
     foreman: {
@@ -41,7 +41,7 @@ export const glassOrchard = {
       abilities: { str: 14, dex: 12, con: 13, int: 11, wis: 12, cha: 13 },
       attacks: [{ name: '剪定鋏', bonus: 4, damage: '1d8+2', type: '斬撃' }],
       tactics: 'brute',
-      traits: ['板挟み：HPが半分を切ると降参する'],
+      traits: [{ id: 'standDown', text: '板挟み：HPが半分を切ると降参する' }],
       blurb: '十九年ここにいる。四人の葬式にも全部出た。それでも辞めない。',
     },
   },
