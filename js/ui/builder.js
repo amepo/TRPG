@@ -14,7 +14,7 @@ import { ANCESTRIES, CLASSES, BACKGROUNDS, CLASS_SPELLS, spellById, label } from
 import { traitList } from '../core/traits.js';
 import { randomName } from '../core/lore.js';
 import { activeWorld, DEFAULT_WORLD } from '../worlds/index.js';
-import { ABILITIES, ABILITY_IDS, abilityMod, SKILLS, skillName } from '../core/rules.js';
+import { ABILITIES, ABILITY_IDS, abilityMod, abilityName, SKILLS, skillById, skillName } from '../core/rules.js';
 import { Rng } from '../core/rng.js';
 import { listCharacters, putCharacter, deleteCharacter } from '../core/store.js';
 
@@ -262,6 +262,16 @@ function stepAbilities(draft, refresh) {
   const mode = MODES.find(m => m.id === draft.mode);
   const modeNote = el('p', { class: 'tiny faint', text: mode?.note || '' });
 
+  /* 種族の加算。「+2は上限が2高いということ？」と訊かれて足した説明。
+     上限も上がるが、それは結果であって、加算は買った値すべてに乗る。
+     8を買っても10になる、を先に言っておく。 */
+  const bonuses = ABILITIES.filter(a => ancestry.bonus?.[a.id]);
+  const first = bonuses[0];
+  const ancestryNote = first ? el('p', { class: 'tiny faint', text:
+    `${ancestry.name}は ${bonuses.map(a => `${a.name}+${ancestry.bonus[a.id]}`).join('・')}。`
+    + `これは決めた値に足されます——${first.name}を8にしても${8 + ancestry.bonus[first.id]}になり、`
+    + `上限も同じだけ上がります。` }) : null;
+
   /* 残りポイントと値段表。ここが「8が0点、15が9点」の答えそのもの。 */
   const budget = point ? el('div', { class: 'card card--flat stack', style: { gap: '7px' } }, [
     el('div', { class: 'spread' }, [
@@ -273,7 +283,7 @@ function stepAbilities(draft, refresh) {
       }),
     ]),
     costTable(),
-    el('p', { class: 'tiny faint', text: `全員8から始めて、上げたぶんだけ払います。8は${pointCost(8)}点なので、8のままなら何も払いません。` }),
+    el('p', { class: 'tiny faint', text: `買えるのは8から15まで。全員8から始めて、上げたぶんだけ払います。8は${pointCost(8)}点なので、8のままなら何も払いません。` }),
     el('p', {
       class: 'tiny faint',
       text: `13から先は値上がりします（14は${pointCost(14)}点、15は${pointCost(15)}点）。`
@@ -318,6 +328,13 @@ function stepAbilities(draft, refresh) {
       : tooPoor ? `次の+1に${nextCost}点／残り${left}点では上げられない`
       : `使用${pointCost(base)}点／次の+1に${nextCost}点`;
 
+    /* この能力値の上限。種族の加算があるぶんだけ、上限も上がる。
+       「+2は上限が2高いという意味？」と訊かれた——半分そうで、
+       加算は買った値すべてに乗る。式のまま出せば取り違えようがない。 */
+    const cap = bonus
+      ? `上限 ${ceiling}＋${bonus}＝${ceiling + bonus}`
+      : `上限 ${ceiling}`;
+
     return el('div', { class: `abil ${isPrimary ? 'is-primary' : ''}` }, [
       el('div', { class: 'abil__main' }, [
         el('div', { class: 'abil__name' }, [
@@ -327,6 +344,7 @@ function stepAbilities(draft, refresh) {
         ]),
         el('div', { class: 'tiny faint', text: a.desc || '' }),
         hint ? el('div', { class: 'tiny faint', text: hint }) : null,
+        el('div', { class: 'tiny faint', text: cap }),
       ]),
       el('div', { class: 'abil__ctl' }, [
         el('button', { class: 'btn btn--sm', disabled: atFloor, onclick: dec, 'aria-label': `${a.name}を下げる` }, ['−']),
@@ -344,6 +362,7 @@ function stepAbilities(draft, refresh) {
     primer,
     modeRow,
     modeNote,
+    ancestryNote,
     budget,
     rolls,
     ...rows,
@@ -356,17 +375,34 @@ function stepSkills(draft, refresh) {
   const ancestry = ANCESTRIES.find(a => a.id === draft.ancestryId);
   const remaining = skillBudget(klass, ancestry) - draft.skills.length;
 
-  const skillChips = el('div', { class: 'chips' }, klass.skillList.map(id => {
+  /* 名前だけ並んだ札から選ばせていたので、はじめての人は何を取ったのか
+     分からないまま進んでいた。何をする技能なのかを、選ぶその場で読ませる。
+     押して開くのではなく開いたまま置くのは、ここが選ぶ画面だからだ。 */
+  const skillChips = el('div', { class: 'stack', style: { gap: '7px' } }, klass.skillList.map(id => {
     const on = draft.skills.includes(id);
+    const skill = skillById(id);
     return el('button', {
-      class: `chip ${on ? 'is-on' : ''}`,
+      class: 'tile', 'aria-pressed': on,
+      // 選べる数を使い切ったら、選べないものは沈める。上の「あと0つ」は
+      // 一覧をたどっているうちに画面の外へ出てしまうので。
+      style: on ? { borderColor: 'var(--gold)' } : (remaining > 0 ? {} : { opacity: '.5' }),
       onclick: () => {
         if (on) draft.skills = draft.skills.filter(s => s !== id);
         else if (remaining > 0) draft.skills.push(id);
         else toast('これ以上は選べません');
         refresh();
       },
-    }, [skillName(id)]);
+    }, [
+      el('div', { class: 'tile__head' }, [
+        el('span', { class: 'tile__name', text: `${on ? '● ' : ''}${skill?.name || id}` }),
+        el('span', {
+          class: 'tiny faint grow', style: { textAlign: 'right' },
+          text: skill ? abilityName(skill.ability) : '',
+        }),
+      ]),
+      skill?.desc ? el('div', { class: 'tile__desc', text: skill.desc }) : null,
+      skill?.example ? el('div', { class: 'tiny faint', style: { marginTop: '4px' }, text: skill.example }) : null,
+    ]);
   }));
 
   const backgrounds = el('div', { class: 'stack' }, BACKGROUNDS.map(b => el('button', {
@@ -394,20 +430,32 @@ function stepSkills(draft, refresh) {
     })),
   ]) : null;
 
+  /* 呪文も同じ理由で中身ごと出す。同じ画面で技能だけ説明があって
+     呪文が名前だけ、では選ぶ側の困りかたは変わらない。 */
   const spells = klass.caster ? el('div', { class: 'stack' }, [
     el('h3', { class: 'card__title', text: `習得する${label('spellPlural', '呪文')}（3つまで）` }),
-    el('div', { class: 'chips' }, (CLASS_SPELLS[klass.id] || []).map(id => {
+    el('div', { class: 'stack', style: { gap: '7px' } }, (CLASS_SPELLS[klass.id] || []).map(id => {
       const on = draft.spells.includes(id);
       const spell = spellById(id);
       return el('button', {
-        class: `chip ${on ? 'is-on' : ''}`,
+        class: 'tile', 'aria-pressed': on,
+        style: on ? { borderColor: 'var(--gold)' } : (draft.spells.length < 3 ? {} : { opacity: '.5' }),
         onclick: () => {
           if (on) draft.spells = draft.spells.filter(s => s !== id);
           else if (draft.spells.length < 3) draft.spells.push(id);
           else toast('3つまでです');
           refresh();
         },
-      }, [`${spell?.name || id}（${spell?.level}）`]);
+      }, [
+        el('div', { class: 'tile__head' }, [
+          el('span', { class: 'tile__name', text: `${on ? '● ' : ''}${spell?.name || id}` }),
+          el('span', {
+            class: 'tiny faint grow', style: { textAlign: 'right' },
+            text: spell ? (spell.level ? `${spell.level}レベル` : label('cantrip', '初級呪文')) : '',
+          }),
+        ]),
+        spell?.desc ? el('div', { class: 'tile__desc', text: spell.desc }) : null,
+      ]);
     })),
   ]) : null;
 

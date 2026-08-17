@@ -483,6 +483,9 @@ try {
       if (!costs.includes(shown)) throw new Error(`値段表に ${shown} が出ていない: ${costs}`);
     }
 
+    // 上限がどこにも書いていないと、どこまで上げられるのか押して試すしかない。
+    if (!/上限/.test(body)) throw new Error('能力値の上限が出ていない');
+
     // ＋を押すと、修正値の表示もその場で動く。
     const row = page.locator('.abil').first();
     const before = await row.locator('.abil__mod').innerText();
@@ -490,6 +493,14 @@ try {
     await row.getByRole('button', { name: /上げる/ }).click();
     const after = await page.locator('.abil').first().locator('.abil__mod').innerText();
     if (before === after) throw new Error(`上げても修正値が動かない: ${before}`);
+
+    // 次の画面。技能は名前だけでなく、何をする技能なのかが出ている。
+    await click('次へ');
+    await page.waitForSelector('dialog[open] .tile');
+    const skills = await page.locator('dialog[open]').innerText();
+    if (!/どれかで振ります|運動|知覚/.test(skills)) throw new Error('技能の一覧が出ていない');
+    const firstSkill = await page.locator('dialog[open] .tile__desc').first().innerText();
+    if (firstSkill.length < 6) throw new Error(`技能の説明が出ていない: ${firstSkill}`);
   });
 
   await step('世界：暦と季節が読める', async () => {
