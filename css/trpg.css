@@ -312,8 +312,9 @@ a { color: var(--gold); }
 
 .stat { text-align: center; padding: 9px 4px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-2); }
 .stat__name { font-size: 11px; color: var(--ink-dim); }
-.stat__mod { font-family: var(--serif); font-size: 20px; color: var(--gold); line-height: 1.2; }
-.stat__score { font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+/* 能力値が主役、修正値はその下。作成画面の .abil と同じ並び。 */
+.stat__score { font-family: var(--serif); font-size: 21px; color: var(--gold); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.stat__mod { font-size: 11px; color: var(--ink-dim); white-space: nowrap; }
 
 .kv { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
 .kv:last-child { border-bottom: none; }

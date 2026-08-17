@@ -51,10 +51,14 @@ export function openCharacterSheet(character, { onChange, canShop = false } = {}
 export function characterSheet(character, { onChange, canShop = false } = {}) {
   const view = buildSheet(character);
 
+  /* 能力値そのものを大きく、修正値をその下に。逆に組んでいたときは
+     「16 が小さくて +3 が大きいのは何なんだ」と言われた——シートの上では
+     その人物を言い表しているのは16のほうで、+3は使うときの数字だ。
+     作成画面の並びとも、これで揃う。 */
   const abilities = el('div', { class: 'stats' }, ABILITIES.map(a => el('div', { class: 'stat' }, [
     el('div', { class: 'stat__name', text: a.name }),
-    el('div', { class: 'stat__mod', text: signed(view.mods[a.id]) }),
     el('div', { class: 'stat__score', text: view.abilities[a.id] }),
+    el('div', { class: 'stat__mod', text: `修正値 ${signed(view.mods[a.id])}` }),
   ])));
 
   const vitals = el('div', {}, [

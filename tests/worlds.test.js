@@ -12,6 +12,7 @@ import { validate, applyEffects } from '../js/core/scenario.js';
 import { BUILT_IN, byId, forWorld } from '../js/scenarios/index.js';
 import { install, remove, strainCapacity, strainOver, summary, hasAugments, catalogue as augments } from '../js/core/augment.js';
 import { Rng } from '../js/core/rng.js';
+import { randomCharacter } from '../js/ui/builder.js';
 
 /* Every test leaves the default world active so ordering never matters. */
 test.afterEach(() => useWorld(DEFAULT_WORLD));
@@ -609,6 +610,29 @@ test('技能にはすべて説明と例がついている', () => {
       assert.ok(skill.desc, `${world.id}/${skill.name}: 説明がない`);
       assert.ok(skill.example, `${world.id}/${skill.name}: 例がない`);
       assert.notEqual(skill.desc, skill.name, `${world.id}/${skill.name}: 説明が名前の繰り返し`);
+    }
+  }
+});
+
+/* ------------------------------------------------------------ おまかせ */
+
+/* 「best score をクラスの主能力へ」とコメントに書いてあったのに、六つまとめて
+   混ぜていたので敏捷8の盗剣士が出ていた。書いてあることは実際に起きる。 */
+test('ランダムな人物は、いちばん高い数字がクラスの主能力に入る', () => {
+  for (const world of WORLDS) {
+    useWorld(world.id);
+    for (let seed = 0; seed < 40; seed++) {
+      const pc = randomCharacter(new Rng(seed));
+      const klass = content.classById(pc.classId);
+      const ancestry = content.ancestryById(pc.ancestryId);
+      // 種族の加算を引いて、配った素点そのものを見る。
+      const bases = rules.ABILITY_IDS.map(id => pc.abilities[id] - (ancestry.bonus?.[id] || 0));
+      const primary = pc.abilities[klass.primary] - (ancestry.bonus?.[klass.primary] || 0);
+      assert.equal(primary, Math.max(...bases),
+        `${world.id}/${klass.name}: 主能力(${klass.primary})の素点が ${primary}、いちばん高いのは ${Math.max(...bases)}`);
+      // 六つの数字は標準配列そのまま。増えても減ってもいない。
+      assert.deepEqual([...bases].sort((a, b) => b - a), [15, 14, 13, 12, 10, 8],
+        `${world.id}/${klass.name}: 配った数字が標準配列と違う`);
     }
   }
 });

@@ -132,6 +132,9 @@ try {
     await page.waitForSelector('dialog[open] .stats');
     const stats = await page.locator('dialog[open] .stat').count();
     if (stats !== 6) throw new Error(`能力値が6つない: ${stats}`);
+    // 大きいほうが能力値、その下が修正値。逆だと「16が小さくて+3が大きい」になる。
+    const first = await page.locator('dialog[open] .stat').first().innerText();
+    if (!/修正値/.test(first)) throw new Error(`修正値の見出しがない: ${first}`);
     await page.locator('#sheetClose').click();
     await page.waitForTimeout(150);
   });

@@ -95,9 +95,11 @@ export function randomCharacter(rng = new Rng()) {
   const klass = rng.pick(CLASSES);
   const ancestry = rng.pick(ANCESTRIES);
   const background = rng.pick(BACKGROUNDS);
-  const scores = rng.shuffle(STANDARD_ARRAY);
-
-  // Put the best score where the class wants it.
+  /* いちばん高い数字はクラスが欲しがるところへ、残りだけを混ぜる。
+     六つまとめて混ぜていた頃は、敏捷8の盗剣士が普通に出てきていた——
+     コメントには「best score」と書いてあったのに、そうなっていなかった。 */
+  const [best, ...rest] = [...STANDARD_ARRAY].sort((a, b) => b - a);
+  const scores = [best, ...rng.shuffle(rest)];
   const order = [klass.primary, ...ABILITY_IDS.filter(id => id !== klass.primary)];
   const abilities = {};
   order.forEach((id, i) => { abilities[id] = scores[i]; });
