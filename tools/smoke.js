@@ -458,6 +458,49 @@ try {
     await page.locator('#sheetClose').click();
   });
 
+  /* 「数字の後ろの (-1) は何？」「8が0点、15が9点ってどういう意味？」という
+     指摘から足した画面。書いてあることが実際に出ているかを見る。 */
+  await step('能力値の画面に、修正値とポイントの値段が出ている', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('セッション支援');
+    await page.getByText('📜 キャラクター').click();
+    await click('新しく作る');
+    await page.waitForSelector('dialog[open] .tile');
+    await click('次へ');                                       // 種族 → クラス
+    await click('次へ');                                       // クラス → 能力値
+    await page.waitForSelector('.abil');
+
+    const body = await page.locator('dialog[open]').innerText();
+    if (!/修正値/.test(body)) throw new Error('修正値という言葉が出ていない');
+    if (!/d20/.test(body)) throw new Error('何を振るのか書いていない');
+    if (!/残りポイント/.test(body)) throw new Error('残りポイントが出ていない');
+    // 値段表そのもの。8が0点、15が9点であることが読み取れなければ意味がない。
+    const costs = await page.locator('.costs').innerText();
+    for (const shown of ['8', '15', '9']) {
+      if (!costs.includes(shown)) throw new Error(`値段表に ${shown} が出ていない: ${costs}`);
+    }
+
+    // ＋を押すと、修正値の表示もその場で動く。
+    const row = page.locator('.abil').first();
+    const before = await row.locator('.abil__mod').innerText();
+    await row.getByRole('button', { name: /上げる/ }).click();
+    await row.getByRole('button', { name: /上げる/ }).click();
+    const after = await page.locator('.abil').first().locator('.abil__mod').innerText();
+    if (before === after) throw new Error(`上げても修正値が動かない: ${before}`);
+  });
+
+  await step('世界：暦と季節が読める', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('世界');
+    await page.getByText('暦と季節').first().waitFor();
+    const body = await page.locator('.screen').innerText();
+    if (!/365/.test(body)) throw new Error('一年の日数が出ていない');
+    for (const season of ['春', '夏', '秋', '冬']) {
+      if (!body.includes(season)) throw new Error(`${season}が出ていない`);
+    }
+    if (!/霜の月/.test(body)) throw new Error('月の名前が出ていない');
+  });
+
   await step('鼠は一体ずつ狙える', async () => {
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await click('ソロプレイ');

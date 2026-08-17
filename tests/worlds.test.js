@@ -456,6 +456,43 @@ test('どの世界にも読み物が揃っている', () => {
   }
 });
 
+/* 「冬はあるみたいだけど他の四季はあるの？　そもそも一年は365日？」という
+   問いから足したもの。訊かれてから決めると世界が二重になるので、決めたことを
+   テストにしておく。 */
+test('どの世界にも暦がある', () => {
+  for (const world of WORLDS) {
+    useWorld(world.id);
+    const cal = LORE.calendar;
+    assert.ok(cal, `${world.id}: 暦がない`);
+    assert.ok(cal.blurb, `${world.id}: 暦の説明がない`);
+    assert.equal(cal.seasons.length, 4, `${world.id}: 季節が四つない`);
+    for (const season of cal.seasons) {
+      assert.ok(season.name, `${world.id}: 季節に名前がない`);
+      assert.ok(season.note, `${world.id}/${season.name}: 何が起きる季節なのか書いていない`);
+    }
+  }
+});
+
+test('灯火の暦は十二ヶ月あって、峠が閉じる月と食い違わない', () => {
+  useWorld('embers');
+  const months = LORE.calendar.seasons.flatMap(s => s.months);
+  assert.equal(months.length, 12, '月が十二ない');
+  assert.equal(new Set(months).size, 12, '同じ名前の月がある');
+  // 三十日の月が十二と、どの月にも属さない五日。合わせて365日。
+  assert.ok(/365/.test(LORE.calendar.blurb), '一年の日数が書いていない');
+  assert.ok(LORE.calendar.extra?.name, '余りの五日に名前がない');
+
+  /* 「峠は四ヶ月閉じる」は決まりごと側にも書いてある。閉じ始めと開けが
+     暦の月名と食い違っていたら、どちらかが嘘になる。 */
+  const winter = LORE.calendar.seasons.find(s => s.name === '冬');
+  const truth = LORE.truths.find(t => t.title.includes('冬'));
+  for (const month of ['霜の月', '雪解けの月']) {
+    assert.ok(truth.text.includes(month), `決まりごとに「${month}」が出てこない`);
+    assert.ok(months.includes(month), `暦に「${month}」がない`);
+  }
+  assert.ok(winter.months.includes('霜の月'), '峠が閉じる月が冬に入っていない');
+});
+
 test('表を振ると、その表の中から返る', () => {
   useWorld('embers');
   const rng = new Rng(11);

@@ -430,3 +430,41 @@ a { color: var(--gold); }
 .fold > summary::-webkit-details-marker { display: none; }
 .fold > summary::before { content: '▸ '; color: var(--ink-dim); }
 .fold[open] > summary::before { content: '▾ '; }
+
+/* ------------------------------------------------ 能力値の割り振り */
+
+/* はじめて遊ぶ人がいちばん詰まる画面。数字だけ並べると「その (-1) は何？」
+   になるので、修正値と、それを買う値段を、行の中に見えるところまで出す。 */
+.abil {
+  display: flex; gap: 12px; align-items: center;
+  padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.abil.is-primary { border-color: var(--gold-dim); }
+.abil__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.abil__name { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+.abil__ctl { display: flex; gap: 8px; align-items: center; flex: none; }
+.abil__num { min-width: 72px; text-align: center; }
+.abil__score { font-family: var(--serif); font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.abil__mod { font-size: 11.5px; color: var(--gold); white-space: nowrap; }
+.abil__calc { font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; }
+
+/* 修正値の目盛り。「2上がるごとに+1」は、言葉より並びのほうが早い。 */
+.modscale { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.modscale__cell {
+  text-align: center; padding: 5px 2px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-2);
+}
+.modscale__score { font-size: 12px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.modscale__mod { font-family: var(--serif); font-size: 15px; color: var(--gold); }
+
+/* ポイントの値段表。「8が0点、15が9点」を、文ではなく表で見せる。 */
+.budget__left { font-family: var(--serif); font-size: 19px; font-variant-numeric: tabular-nums; }
+.costs { display: flex; flex-direction: column; gap: 2px; overflow-x: auto; }
+.costs__row {
+  display: grid; grid-template-columns: 68px repeat(8, 1fr); gap: 2px;
+  font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; min-width: 300px;
+}
+.costs__row > span { padding: 4px 0; background: var(--bg-2); border-radius: 4px; }
+.costs__row--head > span { color: var(--gold); }
+.costs__label { text-align: left; padding-left: 6px !important; color: var(--ink-dim); background: none !important; }

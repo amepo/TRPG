@@ -201,54 +201,149 @@ function stepClass(draft, refresh) {
   ])));
 }
 
+/* 能力値の画面。ここは最初に遊ぶ人がいちばん詰まる場所だった——
+   「数字の後ろの (-1) は何？」「8が0点で15が9点ってどういうこと？」。
+   どちらも画面のどこにも書いていなかった。書いてある前提で作らない。
+
+   出すのは三つ。(1) 判定で使うのは能力値ではなく修正値であること、
+   (2) 修正値がどう決まるかの目盛り、(3) ポイントの値段表。 */
+const MODES = [
+  { id: 'point', label: 'ポイント割り振り', note: `${POINT_BUY_BUDGET}点を6つの能力値に配ります。迷ったら、これ。` },
+  { id: 'array', label: '標準配列', note: `決まった6つの数字（${STANDARD_ARRAY.join('・')}）を並べ替えて使います。速い。` },
+  { id: 'roll', label: 'ダイスで決める', note: '4d6から低い1個を捨てて6回。強い人も弱い人も出ます。運任せ。' },
+];
+
+/* 修正値の目盛り。「2上がるごとに+1」を言葉で書くより、並べたほうが早い。 */
+const MOD_SCALE = [8, 10, 12, 14, 16, 18];
+
+/** ポイントの値段表。8が0点、15が9点——その「0」と「9」を実際に並べて見せる。 */
+const costTable = () => el('div', { class: 'costs' }, [
+  el('div', { class: 'costs__row costs__row--head' }, [
+    el('span', { class: 'costs__label', text: '能力値' }),
+    ...[8, 9, 10, 11, 12, 13, 14, 15].map(score => el('span', { text: String(score) })),
+  ]),
+  el('div', { class: 'costs__row' }, [
+    el('span', { class: 'costs__label', text: '必要な点' }),
+    ...[8, 9, 10, 11, 12, 13, 14, 15].map(score => el('span', { text: String(pointCost(score)) })),
+  ]),
+]);
+
 function stepAbilities(draft, refresh) {
   const spent = pointsSpent(draft.abilities);
+  const left = POINT_BUY_BUDGET - spent;
   const ancestry = ANCESTRIES.find(a => a.id === draft.ancestryId);
+  const klass = CLASSES.find(c => c.id === draft.classId);
+  const point = draft.mode === 'point';
 
-  const modeRow = el('div', { class: 'chips' }, [
-    ['point', 'ポイント割り振り'], ['array', '標準配列'], ['roll', 'ダイスで決める'],
-  ].map(([id, label]) => el('button', {
-    class: `chip ${draft.mode === id ? 'is-on' : ''}`,
+  const modeRow = el('div', { class: 'chips' }, MODES.map(m => el('button', {
+    class: `chip ${draft.mode === m.id ? 'is-on' : ''}`,
     onclick: () => {
-      draft.mode = id;
-      if (id === 'array') ABILITY_IDS.forEach((a, i) => { draft.abilities[a] = STANDARD_ARRAY[i]; });
-      if (id === 'roll') { draft.rolled = rollAbilities(); ABILITY_IDS.forEach((a, i) => { draft.abilities[a] = draft.rolled[i]; }); }
-      if (id === 'point') ABILITY_IDS.forEach(a => { draft.abilities[a] = 8; });
+      draft.mode = m.id;
+      if (m.id === 'array') ABILITY_IDS.forEach((a, i) => { draft.abilities[a] = STANDARD_ARRAY[i]; });
+      if (m.id === 'roll') { draft.rolled = rollAbilities(); ABILITY_IDS.forEach((a, i) => { draft.abilities[a] = draft.rolled[i]; }); }
+      if (m.id === 'point') ABILITY_IDS.forEach(a => { draft.abilities[a] = 8; });
       refresh();
     },
-  }, [label])));
+  }, [m.label])));
+
+  /* 判定の仕組み。能力値そのものは振らない、という一点だけを繰り返す。 */
+  const primer = el('div', { class: 'card card--flat stack', style: { gap: '7px' } }, [
+    el('p', { class: 'tiny', text: '判定で振るのは d20（20面ダイス）1個。そこに足すのが、下の数字の隣に出ている修正値です。' }),
+    el('p', { class: 'tiny muted', text: '能力値そのものは足しません。敏捷14（修正値+2）なら、隠れるときは 出目+2。合計が目標値以上で成功。' }),
+    el('div', { class: 'modscale' }, MOD_SCALE.map(score => el('div', { class: 'modscale__cell' }, [
+      el('div', { class: 'modscale__score', text: String(score) }),
+      el('div', { class: 'modscale__mod', text: signed(abilityMod(score)) }),
+    ]))),
+    el('p', { class: 'tiny faint', text: '10と11が ±0 の基準。そこから2上がるごとに修正値が+1、2下がるごとに−1になります。' }),
+  ]);
+
+  const mode = MODES.find(m => m.id === draft.mode);
+  const modeNote = el('p', { class: 'tiny faint', text: mode?.note || '' });
+
+  /* 残りポイントと値段表。ここが「8が0点、15が9点」の答えそのもの。 */
+  const budget = point ? el('div', { class: 'card card--flat stack', style: { gap: '7px' } }, [
+    el('div', { class: 'spread' }, [
+      el('span', { class: 'tiny muted', text: '残りポイント' }),
+      el('span', {
+        class: 'budget__left',
+        style: { color: left < 0 ? 'var(--blood)' : 'var(--gold)' },
+        text: `${left} / ${POINT_BUY_BUDGET}`,
+      }),
+    ]),
+    costTable(),
+    el('p', { class: 'tiny faint', text: `全員8から始めて、上げたぶんだけ払います。8は${pointCost(8)}点なので、8のままなら何も払いません。` }),
+    el('p', {
+      class: 'tiny faint',
+      text: `13から先は値上がりします（14は${pointCost(14)}点、15は${pointCost(15)}点）。`
+        + `15を2つ取ると${pointCost(15) * 2}点で、残り${POINT_BUY_BUDGET - pointCost(15) * 2}点で他の4つを埋めることになります。`,
+    }),
+  ]) : null;
+
+  const rolls = draft.mode === 'roll' ? el('div', { class: 'row' }, [
+    el('span', { class: 'tiny muted grow', text: `出目: ${(draft.rolled || []).join(', ')}` }),
+    button('振り直す', () => {
+      draft.rolled = rollAbilities();
+      ABILITY_IDS.forEach((a, i) => { draft.abilities[a] = draft.rolled[i]; });
+      refresh();
+    }, 'btn btn--sm'),
+  ]) : null;
+
+  const floor = point ? 8 : 3;
+  const ceiling = point ? 15 : 18;
 
   const rows = ABILITIES.map(a => {
     const base = draft.abilities[a.id];
     const bonus = ancestry.bonus?.[a.id] || 0;
     const total = base + bonus;
-    const dec = () => { draft.abilities[a.id] = Math.max(8, base - 1); refresh(); };
+    const isPrimary = klass?.primary === a.id;
+
+    const nextCost = pointCost(base + 1) - pointCost(base);
+    const tooHigh = base >= ceiling;
+    const tooPoor = point && nextCost > left;
+    const atFloor = base <= floor;
+
+    const dec = () => { draft.abilities[a.id] = Math.max(floor, base - 1); refresh(); };
     const inc = () => {
-      const next = base + 1;
-      if (draft.mode === 'point') {
-        if (next > 15) { toast('ポイント購入は15までです'); return; }
-        const trial = { ...draft.abilities, [a.id]: next };
-        if (pointsSpent(trial) > POINT_BUY_BUDGET) { toast('ポイントが足りません'); return; }
-      }
-      draft.abilities[a.id] = Math.min(18, next);
+      if (tooHigh) { toast(`${point ? 'ポイント購入は' : ''}${ceiling}までです`); return; }
+      if (tooPoor) { toast(`あと${nextCost - left}点足りません`); return; }
+      draft.abilities[a.id] = base + 1;
       refresh();
     };
-    return el('div', { class: 'row', style: { gap: '8px' } }, [
-      el('span', { class: 'grow', text: `${a.name}${bonus ? `（種族 +${bonus}）` : ''}` }),
-      el('button', { class: 'btn btn--sm', onclick: dec }, ['−']),
-      el('span', { style: { minWidth: '54px', textAlign: 'center' }, text: `${total} (${signed(abilityMod(total))})` }),
-      el('button', { class: 'btn btn--sm', onclick: inc }, ['＋']),
+
+    /* この能力値を1つ上げるのに何点かかるか。上げられないなら、その理由。 */
+    const hint = !point ? null
+      : tooHigh ? 'ここまで（ポイントで買えるのは15まで）'
+      : tooPoor ? `次の+1に${nextCost}点／残り${left}点では上げられない`
+      : `使用${pointCost(base)}点／次の+1に${nextCost}点`;
+
+    return el('div', { class: `abil ${isPrimary ? 'is-primary' : ''}` }, [
+      el('div', { class: 'abil__main' }, [
+        el('div', { class: 'abil__name' }, [
+          el('span', { text: a.name }),
+          isPrimary ? el('span', { class: 'tag', text: `${klass.name}の主能力` }) : null,
+          bonus ? el('span', { class: 'tag', text: `${ancestry.name} +${bonus}` }) : null,
+        ]),
+        el('div', { class: 'tiny faint', text: a.desc || '' }),
+        hint ? el('div', { class: 'tiny faint', text: hint }) : null,
+      ]),
+      el('div', { class: 'abil__ctl' }, [
+        el('button', { class: 'btn btn--sm', disabled: atFloor, onclick: dec, 'aria-label': `${a.name}を下げる` }, ['−']),
+        el('div', { class: 'abil__num' }, [
+          el('div', { class: 'abil__score', text: String(total) }),
+          el('div', { class: 'abil__mod', text: `修正値 ${signed(abilityMod(total))}` }),
+          bonus ? el('div', { class: 'abil__calc', text: `${base}＋${bonus}` }) : null,
+        ]),
+        el('button', { class: 'btn btn--sm', disabled: tooHigh || tooPoor, onclick: inc, 'aria-label': `${a.name}を上げる` }, ['＋']),
+      ]),
     ]);
   });
 
   return el('div', { class: 'stack' }, [
+    primer,
     modeRow,
-    draft.mode === 'point'
-      ? el('p', { class: 'tiny muted', text: `残りポイント ${POINT_BUY_BUDGET - spent} / ${POINT_BUY_BUDGET}（8が0点、15が9点）` })
-      : el('p', { class: 'tiny muted', text: draft.mode === 'roll' ? `出目: ${(draft.rolled || []).join(', ')}` : '標準配列 15,14,13,12,10,8' }),
-    draft.mode === 'roll'
-      ? button('振り直す', () => { draft.rolled = rollAbilities(); ABILITY_IDS.forEach((a, i) => { draft.abilities[a] = draft.rolled[i]; }); refresh(); }, 'btn btn--sm')
-      : null,
+    modeNote,
+    budget,
+    rolls,
     ...rows,
   ]);
 }

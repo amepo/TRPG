@@ -32,6 +32,7 @@ export function lorePanel({ withHeader = false } = {}) {
     withHeader ? header(activeWorld()) : null,
     primer(),
     truthsCard(),
+    calendarCard(),
     skillsCard(),
     standingCard(),
     districtsCard(),
@@ -112,6 +113,29 @@ const skillsCard = () => (SKILLS.length ? el('div', { class: 'card stack' }, [
     s.example ? body(s.example, 'tiny faint') : null,
   ])),
 ]) : null);
+
+/* 暦。「一年は何日か」「冬以外の季節はあるのか」は遊んでいると必ず訊かれる。
+   訊かれてから決めると世界が二重になるので、決めたものをここに出しておく。 */
+function calendarCard() {
+  const cal = LORE.calendar;
+  if (!cal?.seasons?.length) return null;
+  return el('div', { class: 'card stack' }, [
+    el('h3', { class: 'card__title', text: cal.name || '暦と季節' }),
+    cal.blurb ? body(cal.blurb) : null,
+    ...cal.seasons.map(s => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
+      el('div', { class: 'spread' }, [
+        el('span', { style: { fontWeight: '600' }, text: s.name }),
+        s.months?.length ? el('span', { class: 'tiny faint', text: s.months.join('・') }) : null,
+      ]),
+      body(s.note || ''),
+    ])),
+    cal.extra ? el('div', { class: 'stack', style: { gap: '2px', marginBottom: '10px' } }, [
+      el('div', { style: { fontWeight: '600', color: 'var(--gold)' }, text: cal.extra.name }),
+      body(cal.extra.note || ''),
+    ]) : null,
+    cal.hint ? body(`▸ ${cal.hint}`, 'tiny faint') : null,
+  ]);
+}
 
 /* 信用スコア。設定であってルールではないので、数値ではなく「どうなるか」を並べる。 */
 function standingCard() {
