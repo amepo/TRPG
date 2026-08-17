@@ -29,7 +29,11 @@ export const silentBell = {
 
   items: {
     ironKey: { id: 'ironKey', name: '錆びた鉄の鍵', desc: '礼拝堂の地下扉に合う。歯の形が新しく削られている。' },
-    charm: { id: 'charm', name: '編み紐の護符', desc: '村の子どもの手作り。所持者は恐怖セーヴに有利。', keep: true },
+    /* 「恐怖セーヴに有利」は書いてあるだけで効いていなかった。宣言に直す。 */
+    charm: {
+      id: 'charm', name: '編み紐の護符', desc: '村の子どもの手作り。所持者は恐怖セーヴに有利。',
+      saveAdvantageVs: ['frightened'], keep: true,
+    },
     ritualDagger: { id: 'ritualDagger', name: '儀式の刃', damage: '1d4+1', type: '刺突', ability: 'dex', desc: '柄に見たことのない文字。' },
     silverBell: { id: 'silverBell', name: '銀の小鐘', desc: '振ると澄んだ音。不死の存在が嫌がる。' },
   },

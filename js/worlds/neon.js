@@ -1093,6 +1093,10 @@ export const neon = {
     strain: '適合度',
   },
 
+  /* この世界には電脳がある。工房が「侵入」の欄を出すかどうかの判断に使う——
+     灯火の卓で書けても効かない欄を出さないため。 */
+  netrun: true,
+
   startingGold: 600,
 
   abilities: ABILITIES,

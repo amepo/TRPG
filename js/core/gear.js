@@ -80,6 +80,8 @@ export function buy(character, id, count = 1) {
 export function sell(character, id, count = 1) {
   const entry = (character.inventory || []).find(i => i.id === id);
   if (!entry) return { ok: false, reason: '持っていません' };
+  // 物語のために渡された品（keep）は売らせない。売れたら先へ進めなくなる。
+  if (entry.keep) return { ok: false, reason: 'これは手放せません' };
   const sold = Math.min(count, entry.count);
   const got = Math.floor((entry.cost || 0) * RESALE) * sold;
 

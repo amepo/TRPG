@@ -703,6 +703,69 @@ try {
     if (!names.every(n => n.startsWith('錆犬'))) throw new Error(`自作の敵が出ていない: ${names.join('、')}`);
   });
 
+  /* 「自分で無限にシナリオを作れるように」の要。JSON でしか書けなかった
+     ところが、実際に工房から書けて、書いたものが遊べるかを見る。 */
+  await step('工房：アイテムを作って持ち物の条件に使える', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();
+    await page.waitForSelector('.issue--ok');
+
+    await click('＋ アイテムを作る');
+    await page.waitForTimeout(250);
+    const card = page.locator('.card').filter({ hasText: '自作のアイテム（1）' });
+    if (!await card.count()) throw new Error('アイテムが作られていない');
+
+    // 種類を「武器として振れる」にすると、ダメージ欄が出る。
+    await card.locator('.select--item-kind').first().selectOption('weapon');
+    await page.waitForTimeout(250);
+    if (!/ダメージ/.test(await card.innerText())) throw new Error('武器の欄が出ていない');
+
+    // 作ったアイテムが、条件「持ち物がある」の選択肢に出てくる。
+    const cond = page.locator('.fold').filter({ hasText: '見せる条件' }).first();
+    await cond.locator('summary').click();
+    await page.locator('.fold[open] .select--add-condition').first().selectOption('has');
+    await page.waitForTimeout(250);
+    const options = await page.locator('.fold[open] select').last().innerText();
+    if (!/item/.test(options + await cond.innerText())) {
+      throw new Error('作ったアイテムが条件の候補に出ていない');
+    }
+  });
+
+  await step('工房：ネオンの卓では侵入を書ける', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    // 世界観の選択で2つめ（ネオンの雨）を選ぶ
+    await page.locator('dialog[open] .tile').nth(1).click();
+    await page.waitForSelector('.node-row');
+
+    const netrun = page.locator('label.chip').filter({ hasText: 'この場面は電脳に入る' });
+    if (!await netrun.count()) throw new Error('侵入の欄が出ていない');
+    await netrun.locator('input').check();
+    await page.waitForTimeout(300);
+    const body = await page.locator('.play').innerText();
+    for (const want of ['逆探知まで', '第1層の名前', '抜けたら']) {
+      if (!body.includes(want)) throw new Error(`侵入の欄に「${want}」が無い`);
+    }
+    await click('＋ 層を足す');
+    await page.waitForTimeout(250);
+    if (!/第2層の名前/.test(await page.locator('.play').innerText())) throw new Error('層が足せない');
+  });
+
+  await step('工房：灯火の卓では侵入の欄を出さない', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();
+    await page.waitForSelector('.issue--ok');
+    // 書けても効かない欄は出さない。
+    if (await page.getByText('この場面は電脳に入る').count()) {
+      throw new Error('電脳の無い世界に侵入の欄が出ている');
+    }
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

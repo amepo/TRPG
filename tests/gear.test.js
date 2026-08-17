@@ -5,7 +5,8 @@ import {
   catalogue, thingById, slotFor, buy, sell, equip, unequip, owns, loadout, SLOTS, RESALE,
 } from '../js/core/gear.js';
 import { createCharacter, recalculate, attackOptions } from '../js/core/character.js';
-import { armorClass } from '../js/core/rules.js';
+import { armorClass, carriedSaveAdvantage, savingThrow } from '../js/core/rules.js';
+import { Rng } from '../js/core/rng.js';
 import { useWorld, DEFAULT_WORLD, WORLDS } from '../js/worlds/index.js';
 
 test.afterEach(() => useWorld(DEFAULT_WORLD));
@@ -162,4 +163,41 @@ test('スロットは4つとも埋められる', () => {
   equip(pc, 'shortbow');
   const filled = loadout(pc).filter(s => s.item).map(s => s.id);
   assert.deepEqual(filled.sort(), SLOTS.map(s => s.id).sort());
+});
+
+/* ------------------------------------------------- 物語のための品 */
+
+/* 護符に「所持者は恐怖セーヴに有利」と書いてあったのに、セーヴは特性と装備しか
+   見ていなかった。持っているだけで効くものが、一つも効いていなかった。 */
+test('持ち物が与えるセーヴの有利が、実際に効く', () => {
+  useWorld('embers');
+  const bare = createCharacter({ name: '素手', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier' });
+  assert.deepEqual(carriedSaveAdvantage(bare), []);
+
+  const withCharm = createCharacter({ name: '護符持ち', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier' });
+  withCharm.inventory = [{ id: 'charm', name: '護符', count: 1, saveAdvantageVs: ['frightened'] }];
+  assert.deepEqual(carriedSaveAdvantage(withCharm), ['frightened']);
+
+  // 実際の振り方まで見る。有利なら2個振って高いほうになる。
+  const low = savingThrow(withCharm, 'wis', 10, { rng: new Rng(3), vs: 'frightened' });
+  assert.equal(low.mode, 'adv', '護符を持っているのに有利になっていない');
+  const plain = savingThrow(bare, 'wis', 10, { rng: new Rng(3), vs: 'frightened' });
+  assert.equal(plain.mode, null);
+
+  // 使い切って0個になったら効かない。
+  withCharm.inventory[0].count = 0;
+  assert.deepEqual(carriedSaveAdvantage(withCharm), []);
+});
+
+/* keep はどこにも読まれていない印だった。売れてしまうと先へ進めなくなる。 */
+test('手放せない品は売れない', () => {
+  useWorld('embers');
+  const pc = createCharacter({ name: '売り手', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier' });
+  pc.gold = 0;
+  pc.inventory = [{ id: 'letter', name: '預かった手紙', count: 1, cost: 40, keep: true }];
+
+  const result = sell(pc, 'letter', 1);
+  assert.equal(result.ok, false, '物語のための品が売れてしまう');
+  assert.equal(pc.gold, 0);
+  assert.equal(pc.inventory.length, 1);
 });

@@ -177,6 +177,14 @@ export function check(actor, skillId, dc, opts = {}) {
 }
 
 /** Saving throw — same maths, different label. */
+/* 持ち物が与える有利。護符に「所持者は恐怖セーヴに有利」と書いてあるのに、
+   セーヴは特性と装備しか見ていなかった——持っているだけで効くものが、
+   一つも効いていなかった。持ち物は冒険中に増えるので、作成時に畳まずここで見る。 */
+export const carriedSaveAdvantage = actor => [
+  ...(actor?.inventory || []).flatMap(i => (i.count > 0 ? i.saveAdvantageVs || [] : [])),
+  ...Object.values(actor?.equipped || {}).flatMap(i => i?.saveAdvantageVs || []),
+];
+
 export function savingThrow(actor, ability, dc, opts = {}) {
   const { rng, advantage = false, disadvantage = false, bonus = 0, vs = null } = opts;
   // `vs` names what the save is against (毒、魅了…) so a trait can grant an
@@ -184,6 +192,7 @@ export function savingThrow(actor, ability, dc, opts = {}) {
   // 有利の出どころは特性と装備の両方。作成時に畳んだ値があればそれを使う。
   const adv = advantage || (vs && (
     actor.saveAdvantageVs?.includes(vs) || traitPassives(actor).saveAdvantageVs.includes(vs)
+    || carriedSaveAdvantage(actor).includes(vs)
   ));
   const dis = disadvantage || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
   const mode = resolveMode({ advantage: adv, disadvantage: dis });

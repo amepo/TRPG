@@ -155,9 +155,13 @@ export function characterSheet(character, { onChange, canShop = false } = {}) {
         slotFor(i) ? el('button', {
           class: 'btn btn--sm btn--ghost', onclick: () => act(equip(character, i.id)),
         }, ['装備']) : null,
-        i.cost ? el('button', {
+        /* keep のものは売らせない。物語のために渡した品を、うっかり
+           換金して先へ進めなくなる——という穴を塞ぐための印だった。
+           印だけ置いて誰も読んでいなかったので、ここで読む。 */
+        i.cost && !i.keep ? el('button', {
           class: 'btn btn--sm btn--ghost', onclick: () => act(sell(character, i.id, 1)),
         }, [`売る ${money(Math.floor(i.cost * RESALE))}`]) : null,
+        i.keep ? el('span', { class: 'tiny faint', text: '手放せない' }) : null,
       ]),
     ]))
     : [el('p', { class: 'muted tiny', text: '何も持っていない。' })]);

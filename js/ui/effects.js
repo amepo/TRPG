@@ -213,6 +213,7 @@ export const CONDITION_KINDS = [
   { id: 'var', name: '変数が…', make: () => ({ var: '', gte: 1 }) },
   { id: 'has', name: '持ち物がある', make: () => ({ has: '' }) },
   { id: 'skillIn', name: '技能を持つ者がいる', make: () => ({ skillIn: [] }) },
+  { id: 'visited', name: 'あの場面を通った', make: () => ({ visited: '' }) },
 ];
 
 const condKindOf = cond => CONDITION_KINDS.find(k => cond && cond[k.id] !== undefined) || null;
@@ -231,6 +232,7 @@ export function describeConditionShort(cond) {
     return `${cond.var} が 0 でない`;
   }
   if (cond.has !== undefined) return `【${cond.has}】を持っている`;
+  if (cond.visited !== undefined) return `「${cond.visited}」を通った`;
   if (cond.skillIn) return `技能（${cond.skillIn.map(skillName).join('/')}）を持つ者がいる`;
   return '条件';
 }
@@ -302,6 +304,17 @@ function conditionFields(part, kind, ctx, change) {
       }))];
     case 'has':
       return [field('持ち物', pickOrType(ctx.items, part.has, v => { part.has = v; change(); }, 'アイテムの id'))];
+    /* 印を立てなくても「あそこを見たか」で分岐できる。印より先に思いつく形。 */
+    case 'visited':
+      return [field('通った場面', el('select', {
+        class: 'select',
+        onchange: e => { part.visited = e.target.value; change(); },
+      }, [
+        el('option', { value: '', text: '（選ぶ）', selected: !part.visited }),
+        ...(ctx.nodes || []).map(n => el('option', {
+          value: n.id, text: n.title || n.id, selected: n.id === part.visited,
+        })),
+      ]))];
     case 'var': {
       const op = part.lte !== undefined ? 'lte' : part.eq !== undefined ? 'eq' : 'gte';
       return [

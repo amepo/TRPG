@@ -8,7 +8,7 @@ import { el, frag, clear, toast, openSheet, closeSheet, confirmSheet, field, but
 import {
   blankScenario, validate, describe, normalize,
 } from '../core/scenario.js';
-import { SKILLS, skillName, DIFFICULTY } from '../core/rules.js';
+import { ABILITIES, SKILLS, skillName, DIFFICULTY } from '../core/rules.js';
 import { MONSTERS, ITEMS, encounterDifficulty, CR_XP, xpForCr } from '../core/content.js';
 import { listScenarios, putScenario, deleteScenario, downloadJSON, pickJSON } from '../core/store.js';
 import { TEMPLATES } from '../templates.js';
@@ -16,6 +16,28 @@ import {
   effectsEditor, conditionEditor, describeEffect, describeConditionShort,
 } from './effects.js';
 import { WORLDS, useWorld, worldById, DEFAULT_WORLD } from '../worlds/index.js';
+
+/* 工房が書けるもの、の宣言。収録シナリオが使っている書き方はすべてここに
+   載っていなければならない——tests/effects-ui.test.js が突き合わせる。
+   「JSON なら書けるが工房では書けない」を、増えた瞬間に落とすための表。 */
+export const EDITABLE = {
+  scenario: ['id', 'title', 'author', 'world', 'blurb', 'level', 'length', 'start',
+    'vars', 'nodes', 'items', 'monsters', 'tutorial'],
+  node: ['id', 'title', 'art', 'text', 'onEnter', 'repeatEffects', 'choices',
+    'combat', 'netrun', 'ending'],
+  choice: ['text', 'to', 'check', 'effects', 'once', 'if', 'requires', 'lockedText'],
+  outcome: ['text', 'to', 'effects'],
+  check: ['skill', 'dc', 'advantage', 'advantageIf', 'success', 'fail'],
+  combat: ['title', 'enemies', 'surprise', 'onVictory', 'onDefeat', 'onFlee'],
+  netrun: ['title', 'traceMax', 'layers', 'ice', 'onSuccess', 'onTraced'],
+  layer: ['name', 'skill', 'dc', 'text', 'effects', 'onFail'],
+  ending: ['type', 'title', 'text', 'noPay'],
+  monster: ['id', 'name', 'kind', 'cr', 'xp', 'acOverride', 'hp', 'hpAvg', 'speed',
+    'tactics', 'attacks', 'traits', 'blurb', 'backupId', 'abilities',
+    'resistances', 'immunities', 'vulnerabilities'],
+  item: ['id', 'name', 'desc', 'cost', 'keep', 'saveAdvantageVs',
+    'damage', 'type', 'ability', 'use', 'amount', 'consumable', 'cures', 'light'],
+};
 
 export class EditorScreen {
   constructor(root, { app, scenario = null }) {
@@ -38,8 +60,9 @@ export class EditorScreen {
   editCtx() {
     const vars = Object.keys(this.scenario.vars || {});
     const items = [...new Set([...Object.keys(this.scenario.items || {}), ...Object.keys(ITEMS)])];
+    const nodes = Object.values(this.scenario.nodes).map(n => ({ id: n.id, title: n.title }));
     return {
-      vars, items,
+      vars, items, nodes,
       onMark: () => this.mark(),
       onChange: () => { this.save(); this.render(); },
     };
@@ -244,6 +267,7 @@ export class EditorScreen {
       el('div', { class: 'play__side stack' }, [
         this.issuesCard(result),
         this.nodesCard(nodeIds),
+        this.itemsCard(),
         this.monstersCard(),
       ]),
     ]));
@@ -383,6 +407,131 @@ export class EditorScreen {
         ]);
       })),
     ]);
+  }
+
+  /* ------------------------------------------------------ 自作のアイテム */
+
+  /* 世界の道具で足りないときのために。手紙、鍵、証拠——物語のためだけの
+     持ち物は、たいてい世界の品目には無い。エンジンは前から scenario.items を
+     見ていたが、これも書ける場所が JSON しかなかった。 */
+  itemsCard() {
+    const bag = this.scenario.items || {};
+    const list = Object.entries(bag);
+    return el('div', { class: 'card card--flat stack' }, [
+      el('div', { class: 'spread' }, [
+        el('h3', { class: 'card__title', text: `自作のアイテム（${list.length}）` }),
+        button('＋ アイテムを作る', () => this.addItem(), 'btn btn--sm'),
+      ]),
+      el('p', { class: 'tiny faint', text: '効果の「持ち物を渡す」と、条件の「持ち物がある」から名前で選べます。' }),
+      ...list.map(([id, item]) => el('div', { class: 'card card--flat stack', style: { gap: '6px' } }, [
+        el('div', { class: 'row' }, [
+          el('div', { class: 'grow' }, [field('名前', el('input', {
+            class: 'input', value: item.name || '',
+            oninput: e => { item.name = e.target.value; this.typed(); },
+            onchange: () => { this.save(); this.render(); },
+          }))]),
+          el('div', { style: { width: '92px' } }, [field('値段', el('input', {
+            class: 'input', type: 'number', min: 0, value: item.cost ?? 0,
+            oninput: e => { item.cost = Number(e.target.value) || 0; this.typed(); },
+          }))]),
+        ]),
+        field('説明', el('input', {
+          class: 'input', value: item.desc || '',
+          oninput: e => { item.desc = e.target.value; this.typed(); },
+        })),
+
+        /* 何をする品か。持っているだけのものと、殴れるものと、使えるもの。 */
+        field('種類', el('select', {
+          class: 'select select--item-kind',
+          onchange: e => {
+            this.mark();
+            for (const key of ['damage', 'type', 'ability', 'use', 'amount', 'consumable']) delete item[key];
+            if (e.target.value === 'weapon') Object.assign(item, { damage: '1d6', type: '打撃', ability: 'str' });
+            if (e.target.value === 'use') Object.assign(item, { use: 'heal', amount: '2d4+2', consumable: true });
+            this.save();
+            this.render();
+          },
+        }, [
+          ['story', '物語の品（持っているだけ）'],
+          ['weapon', '武器として振れる'],
+          ['use', '使うと効く（消耗品）'],
+        ].map(([value, text]) => el('option', {
+          value, text, selected: itemKindOf(item) === value,
+        })))),
+
+        itemKindOf(item) === 'weapon' ? el('div', { class: 'row' }, [
+          el('div', { style: { width: '96px' } }, [field('ダメージ', el('input', {
+            class: 'input', value: item.damage || '', placeholder: '1d6',
+            oninput: e => { item.damage = e.target.value; this.typed(); },
+          }))]),
+          el('div', { style: { width: '88px' } }, [field('種別', el('input', {
+            class: 'input', value: item.type || '', placeholder: '刺突',
+            oninput: e => { item.type = e.target.value; this.typed(); },
+          }))]),
+          el('div', { class: 'grow' }, [field('使う能力値', el('select', {
+            class: 'select', onchange: e => { item.ability = e.target.value; this.save(); },
+          }, ABILITIES.map(a => el('option', { value: a.id, text: a.name, selected: a.id === item.ability }))))]),
+        ]) : null,
+
+        itemKindOf(item) === 'use' ? el('div', { class: 'row' }, [
+          el('div', { class: 'grow' }, [field('効き方', el('select', {
+            class: 'select',
+            onchange: e => { this.mark(); item.use = e.target.value; this.save(); this.render(); },
+          }, [
+            ['heal', '回復する'],
+            ['damage', '投げてダメージ'],
+          ].map(([value, text]) => el('option', { value, text, selected: (item.use || 'heal') === value }))))]),
+          el('div', { style: { width: '110px' } }, [field('量', el('input', {
+            class: 'input', value: item.amount || '', placeholder: '2d4+2',
+            oninput: e => { item.amount = e.target.value; this.typed(); },
+          }))]),
+        ]) : null,
+
+        el('div', { class: 'row' }, [
+          el('label', { class: 'chip' }, [
+            el('input', {
+              type: 'checkbox', checked: !!item.keep,
+              onchange: e => { this.mark(); item.keep = e.target.checked || undefined; this.save(); this.render(); },
+            }),
+            ' 手放せない（売れない）',
+          ]),
+          el('label', { class: 'chip' }, [
+            el('input', {
+              type: 'checkbox', checked: !!(item.saveAdvantageVs || []).length,
+              onchange: e => {
+                this.mark();
+                item.saveAdvantageVs = e.target.checked ? ['frightened'] : undefined;
+                this.save();
+                this.render();
+              },
+            }),
+            ' 持つ者は恐怖セーヴに有利',
+          ]),
+        ]),
+
+        el('div', { class: 'row' }, [
+          el('span', { class: 'tiny faint grow', text: `id: ${id}` }),
+          button('消す', async () => {
+            const ok = await confirmSheet('このアイテムを消す', `「${item.name || id}」を消します。渡す効果や持ち物の条件で使っていると、そこが空になります。`, { danger: true, okText: '消す' });
+            if (!ok) return;
+            this.mark();
+            delete this.scenario.items[id];
+            this.save();
+            this.render();
+          }, 'btn btn--sm btn--danger'),
+        ]),
+      ])),
+    ]);
+  }
+
+  addItem() {
+    this.mark();
+    this.scenario.items = this.scenario.items || {};
+    let id = 'item';
+    for (let i = 2; this.scenario.items[id]; i++) id = `item${i}`;
+    this.scenario.items[id] = { id, name: '新しいアイテム', desc: '', cost: 0 };
+    this.save();
+    this.render();
   }
 
   /* --------------------------------------------------------- 自作の敵 */
@@ -601,6 +750,8 @@ export class EditorScreen {
       el('hr', { class: 'divider' }),
       this.combatBlock(node, update),
       el('hr', { class: 'divider' }),
+      this.netrunBlock(node, update),
+      el('hr', { class: 'divider' }),
       this.endingBlock(node, update),
     ]);
   }
@@ -679,6 +830,33 @@ export class EditorScreen {
               }))]),
             ]),
             el('p', { class: 'tiny faint', text: `DC${choice.check.dc} = ${difficultyLabel(choice.check.dc)}` }),
+            field('振り方', el('select', {
+              class: 'select',
+              onchange: e => {
+                this.mark();
+                choice.check.advantage = e.target.value || undefined;
+                this.save();
+                this.render();
+              },
+            }, [
+              ['', 'ふつうに1個振る'],
+              ['advantage', '有利：2個振って高いほう'],
+              ['disadvantage', '不利：2個振って低いほう'],
+            ].map(([value, text]) => el('option', { value, text, selected: (choice.check.advantage || '') === value })))),
+            /* 条件つきの有利。「名簿を持っていれば説得しやすい」のような、
+               それまでの行いが判定に効く形。収録シナリオが6箇所で使っている。 */
+            this.foldable(
+              '有利になる条件',
+              describeConditionShort(choice.check.advantageIf),
+              frag(
+                el('p', { class: 'tiny faint', text: '満たしていれば、この判定は2個振って高いほうを使います。' }),
+                conditionEditor(choice.check.advantageIf, next => {
+                  choice.check.advantageIf = next;
+                  this.save();
+                  this.render();
+                }, this.editCtx()),
+              ),
+            ),
             field('成功したら', nodeOptions(choice.check.success?.to, v => {
               choice.check.success = { ...(choice.check.success || {}), to: v };
             })),
@@ -708,6 +886,17 @@ export class EditorScreen {
                 choice.check.fail = { ...(choice.check.fail || {}), text: e.target.value.split('\n').filter(Boolean) };
               },
             })),
+            /* 成功側だけ効果を書けて、失敗側は書けなかった。失敗にこそ
+               「時間を食う」「怪我をする」を置きたいので、同じものを出す。 */
+            this.foldable(
+              '失敗したときの効果',
+              (choice.check.fail?.effects || []).map(describeEffect).join('、'),
+              effectsEditor(
+                (choice.check.fail = choice.check.fail || {}).effects
+                  = choice.check.fail.effects || [],
+                this.editCtx(),
+              ),
+            ),
           ])
           : field('行き先', nodeOptions(choice.to, v => { choice.to = v; })),
 
@@ -807,6 +996,177 @@ export class EditorScreen {
           ...Object.keys(this.scenario.nodes).map(id =>
             el('option', { value: id, text: this.scenario.nodes[id].title || id, selected: id === node.combat.onDefeat?.to })),
         ])),
+        /* 逃げ道。収録シナリオは24箇所すべてで書いているのに、工房からは
+           書けなかった。行き先が無いと、逃げた先が行き止まりになる。 */
+        field('逃げたら', el('select', {
+          class: 'select',
+          onchange: e => { this.mark(); node.combat.onFlee = e.target.value ? { to: e.target.value } : undefined; this.save(); },
+        }, [
+          el('option', { value: '', text: '（逃げられない）', selected: !node.combat.onFlee }),
+          ...Object.keys(this.scenario.nodes).map(id =>
+            el('option', { value: id, text: this.scenario.nodes[id].title || id, selected: id === node.combat.onFlee?.to })),
+        ])),
+        field('不意打ち', el('select', {
+          class: 'select',
+          onchange: e => { this.mark(); node.combat.surprise = e.target.value || undefined; this.save(); },
+        }, [
+          ['', 'なし（同時に始まる）'],
+          ['party', 'こちらが先手：敵は1ラウンド動けない'],
+          ['enemy', '敵が先手：こちらが1ラウンド動けない'],
+        ].map(([value, text]) => el('option', { value, text, selected: (node.combat.surprise || '') === value })))),
+      ]) : null,
+    ]);
+  }
+
+  /* ------------------------------------------------------------ 侵入 */
+
+  /* ネットラン。層を順に抜けていくあいだ、追跡ゲージが溜まる。
+     世界に電脳が無ければ（灯火）この欄自体を出さない——書けても効かないので。 */
+  netrunBlock(node, update) {
+    const world = worldById(this.scenario.world || DEFAULT_WORLD);
+    if (!world?.netrun && !node.netrun) return null;
+
+    const nodeOptions = (selected, onChange) => el('select', {
+      class: 'select', onchange: e => { this.mark(); onChange(e.target.value || undefined); this.save(); },
+    }, [
+      el('option', { value: '', text: '（進まない）', selected: !selected }),
+      ...Object.keys(this.scenario.nodes).map(id =>
+        el('option', { value: id, text: this.scenario.nodes[id].title || id, selected: id === selected })),
+    ]);
+
+    return el('div', { class: 'stack' }, [
+      el('div', { class: 'spread' }, [
+        el('h3', { class: 'card__title', text: '侵入（電脳）' }),
+        el('label', { class: 'chip' }, [
+          el('input', {
+            type: 'checkbox', checked: !!node.netrun,
+            onchange: e => {
+              this.mark();
+              node.netrun = e.target.checked
+                ? {
+                  title: node.title || '侵入', traceMax: 5,
+                  layers: [{ name: '外殻', skill: 'netops', dc: 12, text: [''] }],
+                  onSuccess: { to: this.scenario.start }, onTraced: { to: this.scenario.start },
+                }
+                : undefined;
+              update();
+            },
+          }),
+          ' この場面は電脳に入る',
+        ]),
+      ]),
+      node.netrun ? el('div', { class: 'stack', style: { gap: '8px' } }, [
+        el('div', { class: 'row' }, [
+          el('div', { class: 'grow' }, [field('接続先の名前', el('input', {
+            class: 'input', value: node.netrun.title || '',
+            oninput: e => { node.netrun.title = e.target.value; this.typed(); },
+          }))]),
+          el('div', { style: { width: '120px' } }, [field('逆探知まで', el('input', {
+            class: 'input', type: 'number', min: 2, max: 12, value: node.netrun.traceMax ?? 5,
+            oninput: e => { node.netrun.traceMax = Number(e.target.value) || 5; this.typed(); },
+          }))]),
+        ]),
+        el('p', { class: 'tiny faint', text: '層を上から順に抜けます。失敗すると追跡が溜まり、逆探知の数に届くと弾かれます。' }),
+
+        ...(node.netrun.layers || []).map((layer, index) => el('div', {
+          class: 'card card--flat stack', style: { gap: '6px' },
+        }, [
+          el('div', { class: 'row' }, [
+            el('div', { class: 'grow' }, [field(`第${index + 1}層の名前`, el('input', {
+              class: 'input', value: layer.name || '',
+              oninput: e => { layer.name = e.target.value; this.typed(); },
+            }))]),
+            el('button', {
+              class: 'btn btn--sm btn--danger',
+              onclick: () => { this.mark(); node.netrun.layers.splice(index, 1); update(); },
+            }, ['×']),
+          ]),
+          el('div', { class: 'row' }, [
+            el('div', { class: 'grow' }, [field('技能', el('select', {
+              class: 'select', onchange: e => { layer.skill = e.target.value; this.save(); },
+            }, SKILLS.map(sk => el('option', { value: sk.id, text: sk.name, selected: sk.id === layer.skill }))))]),
+            el('div', { style: { width: '110px' } }, [field('DC', el('input', {
+              class: 'input', type: 'number', min: 1, max: 30, value: layer.dc ?? 12,
+              oninput: e => { layer.dc = Number(e.target.value) || 12; this.typed(); },
+            }))]),
+          ]),
+          field('この層の描写', el('textarea', {
+            class: 'textarea', style: { minHeight: '60px' },
+            value: [].concat(layer.text || []).join('\n'),
+            oninput: e => { layer.text = e.target.value.split('\n').filter(Boolean); this.typed(); },
+          })),
+          field('抜けたときの効果', frag(effectsEditor(layer.effects = layer.effects || [], this.editCtx()))),
+          el('div', { class: 'row' }, [
+            el('div', { style: { width: '120px' } }, [field('弾かれた傷', el('input', {
+              class: 'input', value: layer.onFail?.damage || '', placeholder: '1d4',
+              oninput: e => {
+                layer.onFail = { ...(layer.onFail || {}), damage: e.target.value || undefined };
+                this.typed();
+              },
+            }))]),
+            el('div', { class: 'grow' }, [field('弾かれたときの描写', el('input', {
+              class: 'input', value: [].concat(layer.onFail?.text || []).join(' '),
+              oninput: e => {
+                layer.onFail = { ...(layer.onFail || {}), text: e.target.value ? [e.target.value] : undefined };
+                this.typed();
+              },
+            }))]),
+          ]),
+        ])),
+        button('＋ 層を足す', () => {
+          this.mark();
+          node.netrun.layers = node.netrun.layers || [];
+          node.netrun.layers.push({ name: `第${node.netrun.layers.length + 1}層`, skill: 'netops', dc: 12, text: [''] });
+          update();
+        }, 'btn btn--sm'),
+
+        /* 防壁。世界の敵から選ぶ。ここに置くと、逆探知の前に戦闘が入る。 */
+        el('div', { class: 'chips' }, (node.netrun.ice || []).map((id, index) =>
+          el('button', {
+            class: 'chip is-on chip--ice',
+            onclick: () => { this.mark(); node.netrun.ice.splice(index, 1); update(); },
+          }, [`${MONSTERS[id]?.name || this.scenario.monsters?.[id]?.name || id} ×`]))),
+        el('select', {
+          class: 'select select--add-ice',
+          onchange: e => {
+            if (!e.target.value) return;
+            this.mark();
+            node.netrun.ice = node.netrun.ice || [];
+            node.netrun.ice.push(e.target.value);
+            update();
+          },
+        }, [
+          el('option', { value: '', text: '＋ 防壁（ICE）を置く…' }),
+          ...Object.values(MONSTERS).filter(m => m.kind === 'ICE' || /ICE/.test(m.name))
+            .map(m => el('option', { value: m.id, text: `${m.name}（CR${m.cr}）` })),
+        ]),
+
+        field('抜けたら', nodeOptions(node.netrun.onSuccess?.to, v => {
+          node.netrun.onSuccess = { ...(node.netrun.onSuccess || {}), to: v };
+        })),
+        field('抜けたときの描写', el('textarea', {
+          class: 'textarea', style: { minHeight: '60px' },
+          value: [].concat(node.netrun.onSuccess?.text || []).join('\n'),
+          oninput: e => {
+            node.netrun.onSuccess = {
+              ...(node.netrun.onSuccess || {}), text: e.target.value.split('\n').filter(Boolean),
+            };
+            this.typed();
+          },
+        })),
+        field('逆探知されたら', nodeOptions(node.netrun.onTraced?.to, v => {
+          node.netrun.onTraced = { ...(node.netrun.onTraced || {}), to: v };
+        })),
+        field('逆探知されたときの描写', el('textarea', {
+          class: 'textarea', style: { minHeight: '60px' },
+          value: [].concat(node.netrun.onTraced?.text || []).join('\n'),
+          oninput: e => {
+            node.netrun.onTraced = {
+              ...(node.netrun.onTraced || {}), text: e.target.value.split('\n').filter(Boolean),
+            };
+            this.typed();
+          },
+        })),
       ]) : null,
     ]);
   }
@@ -841,10 +1201,22 @@ export class EditorScreen {
           class: 'textarea', value: [].concat(node.ending.text || []).join('\n'),
           oninput: e => { node.ending.text = e.target.value.split('\n').filter(Boolean); this.typed(); },
         })),
+        /* 報酬の点検（npm run economy）が読む印。良い結末なのに一銭も
+           入らないと「取りこぼし」として挙がるので、わざとの場合はここで言う。 */
+        el('label', { class: 'chip' }, [
+          el('input', {
+            type: 'checkbox', checked: !!node.ending.noPay,
+            onchange: e => { this.mark(); node.ending.noPay = e.target.checked || undefined; this.save(); },
+          }),
+          ' 報酬を払わないことに意味がある結末',
+        ]),
       ]) : null,
     ]);
   }
 }
+
+/* その品はどの型か。データの形から見分ける（型そのものは持たせない）。 */
+const itemKindOf = item => (item?.damage ? 'weapon' : item?.use ? 'use' : 'story');
 
 const difficultyLabel = dc => {
   let best = DIFFICULTY[0];
