@@ -185,8 +185,14 @@ function stepAncestry(draft, refresh) {
     ]),
     el('div', { class: 'tile__desc', text: a.blurb }),
     el('div', { class: 'tiny faint', text: traitList(a).map(t => t.text).join('／') }),
+    a.life ? el('div', { class: 'tiny faint', text: lifeLine(a.life) }) : null,
   ])));
 }
+
+/** 「およそ70年（成人16）」。寿命を持たない世界のためにここで組む。 */
+export const lifeLine = life => (life.typical
+  ? `寿命 およそ${life.typical}年（成人 ${life.adult}／長ければ${life.oldest}）`
+  : '寿命という区切りがない');
 
 function stepClass(draft, refresh) {
   return el('div', { class: 'stack' }, CLASSES.map(c => el('button', {

@@ -116,7 +116,9 @@ const SKILLS = [
 
 const ORIGINS = [
   {
-    id: 'corp',
+    id: 'corp', name: '企業育ち', blurb: '社宅で育った。停電も断水も知らない。外の作法だけを知らない。',
+    life: { adult: 18, typical: 84, oldest: 105,
+      note: '企業医療がつく。上層の平均寿命は84歳で、これは旧世界の記録より長い。' },
     bonus: { int: 2, cha: 1 }, speed: 9,
     traits: [
       { id: 'corpSpeak', text: '社内語：【企業儀礼】を習得' },
@@ -126,6 +128,8 @@ const ORIGINS = [
   },
   {
     id: 'street', name: 'ストリート', blurb: '路地の地図が頭に入っている。名前は三つある。',
+    life: { adult: 15, typical: 58, oldest: 80,
+      note: '下層の平均は58歳。ただし統計に載るのは与信のある死者だけなので、実際はもっと低い。' },
     bonus: { dex: 2, con: 1 }, speed: 9,
     traits: [
       { id: 'streetSense', text: '土地勘：【街の勘】を習得' },
@@ -134,7 +138,9 @@ const ORIGINS = [
     grantSkills: ['streetwise'],
   },
   {
-    id: 'nomad',
+    id: 'nomad', name: 'ノマド', blurb: '外環の家族で育った。血のつながりは関係ない。車列が家だ。',
+    life: { adult: 16, typical: 65, oldest: 90,
+      note: '医療が届かないぶん短い。ただし歯と関節は、同じ歳の都市の人間よりよほど丈夫だ。' },
     bonus: { con: 2, wis: 1 }, speed: 9,
     traits: [
       { id: 'roadLife', text: '車上生活：【運転】を習得' },
@@ -144,6 +150,8 @@ const ORIGINS = [
   },
   {
     id: 'exmil', name: '元軍属', blurb: '契約は切れた。訓練は切れない。',
+    life: { adult: 18, typical: 62, oldest: 85,
+      note: '軍の改造を抜かないまま除隊した者は、五十代で不調が出る。抜く金は自腹だ。' },
     bonus: { str: 2, con: 1 }, speed: 9,
     traits: [
       { id: 'combatDrilled', text: '戦闘訓練：HP +1/レベル' },
@@ -151,7 +159,9 @@ const ORIGINS = [
     ],
   },
   {
-    id: 'academy',
+    id: 'academy', name: 'アカデミー', blurb: '奨学金と引き換えに十年。論文は書けるが、路地の歩き方は知らない。',
+    life: { adult: 22, typical: 80, oldest: 100,
+      note: '上層に準じる。ただし奨学金を返し終える前に降りてきた者は、下層の数字に戻る。' },
     bonus: { int: 2, wis: 1 }, speed: 9,
     traits: [
       { id: 'research', text: '基礎研究：【資料】を習得' },
@@ -160,7 +170,9 @@ const ORIGINS = [
     grantSkills: ['datalore'],
   },
   {
-    id: 'synth',
+    id: 'synth', name: '合成体', blurb: '体の大半が作りもの。医者ではなく整備士にかかる。',
+    life: { adult: 0, typical: 0, oldest: 0,
+      note: '寿命という言い方をしない。部品の供給が切れたときが終わりで、それは体ではなく契約が決める。' },
     bonus: { con: 2, str: 1 }, speed: 9,
     traits: [
       { id: 'syntheticBody', text: '非生物代謝：毒ダメージに免疫、毒状態にならない' },

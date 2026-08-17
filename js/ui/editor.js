@@ -9,7 +9,7 @@ import {
   blankScenario, validate, describe, normalize,
 } from '../core/scenario.js';
 import { SKILLS, skillName, DIFFICULTY } from '../core/rules.js';
-import { MONSTERS, ITEMS, encounterDifficulty } from '../core/content.js';
+import { MONSTERS, ITEMS, encounterDifficulty, CR_XP, xpForCr } from '../core/content.js';
 import { listScenarios, putScenario, deleteScenario, downloadJSON, pickJSON } from '../core/store.js';
 import { TEMPLATES } from '../templates.js';
 import {
@@ -244,6 +244,7 @@ export class EditorScreen {
       el('div', { class: 'play__side stack' }, [
         this.issuesCard(result),
         this.nodesCard(nodeIds),
+        this.monstersCard(),
       ]),
     ]));
   }
@@ -382,6 +383,165 @@ export class EditorScreen {
         ]);
       })),
     ]);
+  }
+
+  /* --------------------------------------------------------- 自作の敵 */
+
+  /* 世界の敵で足りないときのために。エンジンは前から scenario.monsters を
+     見ていたが、書ける場所が JSON しかなかった。「敵モブとか自分で追加したい」
+     という声はもっともで、工房から作れないと存在しないのと同じ。 */
+  monstersCard() {
+    const bag = this.scenario.monsters || {};
+    const list = Object.entries(bag);
+    return el('div', { class: 'card card--flat stack' }, [
+      el('div', { class: 'spread' }, [
+        el('h3', { class: 'card__title', text: `自作の敵（${list.length}）` }),
+        button('＋ 敵を作る', () => this.addMonster(), 'btn btn--sm'),
+      ]),
+      el('p', { class: 'tiny faint', text: 'ここで作った敵は、戦闘の「敵を追加」に出てきます。同じ敵を並べればＡＢＣが振られます。' }),
+      ...list.map(([id, monster]) => this.monsterForm(id, monster)),
+    ]);
+  }
+
+  addMonster() {
+    this.mark();
+    this.scenario.monsters = this.scenario.monsters || {};
+    let id = 'mob';
+    for (let i = 2; this.scenario.monsters[id]; i++) id = `mob${i}`;
+    this.scenario.monsters[id] = {
+      id, name: '新しい敵', kind: '人型', cr: 0.25, xp: xpForCr(0.25),
+      acOverride: 12, hpAvg: 9, speed: 9, tactics: 'brute',
+      attacks: [{ name: '殴る', bonus: 3, damage: '1d6+1', type: '打撃' }],
+      blurb: '',
+    };
+    this.save();
+    this.render();
+  }
+
+  monsterForm(id, m) {
+    const touch = () => { this.typed(); };
+    const num = (label, key, opts = {}) => field(label, el('input', {
+      class: 'input', type: 'number', value: m[key] ?? 0, ...opts,
+      oninput: e => { m[key] = Number(e.target.value) || 0; touch(); },
+    }));
+
+    return this.foldable(
+      m.name || id,
+      `CR${m.cr}／HP${m.hpAvg}／AC${m.acOverride}`,
+      frag(
+        el('div', { class: 'row' }, [
+          el('div', { class: 'grow' }, [field('名前', el('input', {
+            class: 'input', value: m.name || '',
+            oninput: e => { m.name = e.target.value; touch(); },
+            // 打っている間は描き直さない（入力欄から指が外れる）。離れたら
+            // 見出しに反映する——一覧が「新しい敵」のままだと探せない。
+            onchange: () => { this.save(); this.render(); },
+          }))]),
+          el('div', { style: { width: '110px' } }, [field('種類（絵柄）', el('input', {
+            class: 'input', value: m.kind || '',
+            oninput: e => { m.kind = e.target.value; touch(); },
+          }))]),
+        ]),
+        el('div', { class: 'row' }, [
+          el('div', { class: 'grow' }, [field('手ごわさ（経験点が決まります）', el('select', {
+            class: 'select',
+            onchange: e => {
+              this.mark();
+              m.cr = Number(e.target.value);
+              m.xp = xpForCr(m.cr);
+              this.save();
+              this.render();
+            },
+          }, Object.keys(CR_XP).map(cr => el('option', {
+            value: cr, text: `CR ${cr}（${CR_XP[cr]}点）`, selected: Number(cr) === m.cr,
+          }))))]),
+        ]),
+        el('div', { class: 'row' }, [
+          el('div', { class: 'grow' }, [num('体力', 'hpAvg', { min: 1 })]),
+          el('div', { class: 'grow' }, [num('AC', 'acOverride', { min: 1 })]),
+          el('div', { class: 'grow' }, [num('移動(m)', 'speed', { min: 0 })]),
+        ]),
+        field('動き方', el('select', {
+          class: 'select',
+          onchange: e => { m.tactics = e.target.value; touch(); },
+        }, [
+          ['brute', '力押し：相手を選ばず殴る'],
+          ['skirmish', '狙い撃ち：弱った相手から。自分が最後の一体で瀕死なら逃げる'],
+          ['caster', '後衛狙い：ACの低い相手を狙い、遠隔があればそれを使う'],
+        ].map(([value, text]) => el('option', { value, text, selected: (m.tactics || 'brute') === value })))),
+        field('登場したときの一言', el('input', {
+          class: 'input', value: m.blurb || '',
+          oninput: e => { m.blurb = e.target.value; touch(); },
+        })),
+
+        el('p', { class: 'tiny faint', text: '攻撃（2つ以上あって CR1 以上なら、1ターンに全部振ります）' }),
+        /* 一行に詰めると、狭い画面で攻撃名がつぶれて読めなくなる。
+           名前を一段目に置いて、数字だけを並べる。 */
+        ...(m.attacks || []).map((atk, index) => el('div', {
+          class: 'stack',
+          style: { gap: '6px', padding: '8px', border: '1px solid var(--line)', borderRadius: '8px' },
+        }, [
+          field('攻撃名', el('input', {
+            class: 'input', value: atk.name || '', placeholder: '噛みつき',
+            oninput: e => { atk.name = e.target.value; touch(); },
+          })),
+          el('div', { class: 'row', style: { gap: '6px' } }, [
+            el('div', { style: { width: '76px' } }, [field('命中', el('input', {
+              class: 'input', type: 'number', value: atk.bonus ?? 0,
+              oninput: e => { atk.bonus = Number(e.target.value) || 0; touch(); },
+            }))]),
+            el('div', { class: 'grow' }, [field('ダメージ', el('input', {
+              class: 'input', value: atk.damage || '', placeholder: '1d6+1',
+              oninput: e => { atk.damage = e.target.value; touch(); },
+            }))]),
+            el('div', { style: { width: '92px' } }, [field('種類', el('input', {
+              class: 'input', value: atk.type || '', placeholder: '打撃',
+              oninput: e => { atk.type = e.target.value; touch(); },
+            }))]),
+          ]),
+          el('div', { class: 'row' }, [
+            el('label', { class: 'chip' }, [
+              el('input', {
+                type: 'checkbox', checked: !!atk.ranged,
+                onchange: e => { this.mark(); atk.ranged = e.target.checked || undefined; this.save(); this.render(); },
+              }),
+              ' 遠隔',
+            ]),
+            el('button', {
+              class: 'btn btn--sm btn--danger',
+              onclick: () => { this.mark(); m.attacks.splice(index, 1); this.save(); this.render(); },
+            }, ['この攻撃を消す']),
+          ]),
+        ])),
+        el('div', { class: 'row' }, [
+          button('＋ 攻撃を足す', () => {
+            this.mark();
+            m.attacks = m.attacks || [];
+            m.attacks.push({ name: '攻撃', bonus: 3, damage: '1d6', type: '打撃' });
+            this.save();
+            this.render();
+          }, 'btn btn--sm'),
+          button('この敵を消す', async () => {
+            const used = this.usedBy(id);
+            const ok = await confirmSheet('この敵を消す', used.length
+              ? `${used.join('、')}で使われています。消すと、その場面の敵が未知になります。`
+              : `「${m.name}」を消します。`, { danger: true, okText: '消す' });
+            if (!ok) return;
+            this.mark();
+            delete this.scenario.monsters[id];
+            this.save();
+            this.render();
+          }, 'btn btn--sm btn--danger'),
+        ]),
+      ),
+    );
+  }
+
+  /** その敵を出している場面の名前。消す前に見せる。 */
+  usedBy(monsterId) {
+    return Object.values(this.scenario.nodes)
+      .filter(n => (n.combat?.enemies || []).includes(monsterId))
+      .map(n => n.title || n.id);
   }
 
   addNode() {
@@ -593,7 +753,11 @@ export class EditorScreen {
 
   combatBlock(node, update) {
     const enemies = node.combat?.enemies || [];
-    const difficulty = enemies.length ? encounterDifficulty(enemies, this.scenario.level || 1, 4) : null;
+    const custom = this.scenario.monsters || {};
+    const nameOf = id => custom[id]?.name || MONSTERS[id]?.name || id;
+    const difficulty = enemies.length
+      ? encounterDifficulty(enemies, this.scenario.level || 1, 4, custom)
+      : null;
 
     return el('div', { class: 'stack' }, [
       el('div', { class: 'spread' }, [
@@ -615,15 +779,18 @@ export class EditorScreen {
       node.combat ? el('div', { class: 'stack', style: { gap: '8px' } }, [
         el('div', { class: 'chips' }, enemies.map((id, index) =>
           el('button', {
-            class: 'chip is-on',
+            class: 'chip is-on chip--enemy',
             onclick: () => { this.mark(); node.combat.enemies.splice(index, 1); update(); },
-          }, [`${MONSTERS[id]?.name || id} ×`]))),
+          }, [`${nameOf(id)} ×`]))),
         difficulty ? el('p', { class: 'tiny muted', text: `想定難易度: ${difficulty.name}（XP ${difficulty.xp}）` }) : null,
         el('select', {
-          class: 'select',
+          class: 'select select--add-enemy',
           onchange: e => { if (e.target.value) { this.mark(); node.combat.enemies.push(e.target.value); update(); } },
         }, [
           el('option', { value: '', text: '＋ 敵を追加…' }),
+          /* 自作の敵を先に出す。作った直後に探させない。 */
+          ...Object.values(custom).sort((a, b) => a.cr - b.cr).map(m =>
+            el('option', { value: m.id, text: `★ ${m.name}（CR${m.cr}）` })),
           ...Object.values(MONSTERS).sort((a, b) => a.cr - b.cr).map(m =>
             el('option', { value: m.id, text: `${m.name}（CR${m.cr}）` })),
         ]),

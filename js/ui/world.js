@@ -7,6 +7,7 @@ import { el, clear, frag, button, richText, toast } from './dom.js';
 import { WORLDS, useWorld, activeWorld } from '../worlds/index.js';
 import { LORE, rollTable, randomName, hasLore } from '../core/lore.js';
 import { SKILLS, abilityName } from '../core/rules.js';
+import { ANCESTRIES, label } from '../core/content.js';
 import { Rng } from '../core/rng.js';
 
 const rng = new Rng(Date.now());
@@ -33,6 +34,7 @@ export function lorePanel({ withHeader = false } = {}) {
     primer(),
     truthsCard(),
     calendarCard(),
+    ancestriesCard(),
     skillsCard(),
     standingCard(),
     districtsCard(),
@@ -98,6 +100,23 @@ const truthsCard = () => (LORE.truths.length ? el('div', { class: 'card stack' }
     body(t.text),
   ])),
 ]) : null);
+
+/* 種族（出自）。「平均寿命はどれくらい？」と訊かれて置いた。
+   どれだけ生きるかは、その種族が村でどう扱われるかまで決めてしまう。 */
+const ancestriesCard = () => (ANCESTRIES.length ? el('div', { class: 'card stack' }, [
+  el('h3', { class: 'card__title', text: label('ancestry', '種族') }),
+  ...ANCESTRIES.map(a => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '12px' } }, [
+    el('div', { class: 'spread' }, [
+      el('span', { style: { fontWeight: '600' }, text: a.name }),
+      a.life ? el('span', { class: 'tiny faint', text: lifeText(a.life) }) : null,
+    ]),
+    body(a.blurb || ''),
+    a.life?.note ? body(a.life.note, 'tiny faint') : null,
+  ])),
+]) : null);
+
+/* 見出しの右に置く短いほう。読み物では「成人」まで出すと行が詰まる。 */
+const lifeText = life => (life.typical ? `およそ${life.typical}年` : '寿命の概念なし');
 
 /* 技能。名前と能力値だけ並べても、はじめて遊ぶ人には何ができるか伝わらない。
    その世界で「何をする技能なのか」を、例まで含めて置く。 */

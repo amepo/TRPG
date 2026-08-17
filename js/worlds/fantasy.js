@@ -113,12 +113,16 @@ const SKILLS = [
 const ANCESTRIES = [
   {
     id: 'human', name: '人間', blurb: '順応性が高く、どんな道でも並以上に歩ける。',
+    life: { adult: 16, typical: 65, oldest: 90,
+      note: '短い。だから急ぐ。この地方で「一代で成した」と言えば、たいてい二十年ほどの話だ。' },
     bonus: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
     speed: 9,
     traits: [{ id: 'versatile', text: '多才：技能をもう1つ習得する' }],
   },
   {
     id: 'elf', name: 'エルフ', blurb: '森と星の民。感覚が鋭く、魅了を寄せつけない。',
+    life: { adult: 30, typical: 350, oldest: 520,
+      note: '人の村に長く住むエルフは少ない。知り合いが先に死ぬからで、嫌っているわけではない。' },
     bonus: { dex: 2, wis: 1 }, speed: 10.5,
     traits: [
       { id: 'keenSenses', text: '鋭敏な感覚：【知覚】を習得' },
@@ -129,6 +133,8 @@ const ANCESTRIES = [
   },
   {
     id: 'dwarf', name: 'ドワーフ', blurb: '岩の下で鍛えられた頑健な工人。',
+    life: { adult: 25, typical: 240, oldest: 350,
+      note: '天寿なら240年。ただし坑道の事故で早く死ぬ者が多く、実際に葬られる歳の平均は180に届かない。' },
     bonus: { con: 2, str: 1 }, speed: 7.5,
     traits: [
       { id: 'stoutFolk', text: '頑健：毒セーヴに有利、最大HP +1/レベル' },
@@ -139,6 +145,8 @@ const ANCESTRIES = [
   },
   {
     id: 'halfling', name: 'ハーフリング', blurb: '小柄で運が良い。誰よりも先に危険を嗅ぎつける。',
+    life: { adult: 20, typical: 110, oldest: 150,
+      note: '人間の倍を生きるので、同じ村に三代ぶんの記憶が残る。揉め事の証人にされやすい。' },
     bonus: { dex: 2, cha: 1 }, speed: 7.5,
     traits: [
       { id: 'lucky', text: '幸運：出目1を休憩ごとに1度だけ振り直せる' },
@@ -148,6 +156,8 @@ const ANCESTRIES = [
   },
   {
     id: 'dragonborn', name: '竜血', blurb: '古竜の血を継ぎ、喉の奥に炎を宿す。',
+    life: { adult: 15, typical: 80, oldest: 100,
+      note: '育つのが速く、十五で背が止まる。人間とほぼ同じ長さを、はじめから大人として過ごす。' },
     bonus: { str: 2, cha: 1 }, speed: 9,
     traits: [
       { id: 'dragonBreath', text: '竜の吐息：敵全体に2d6の火（休憩ごとに1回、反応セーヴで半減）' },
@@ -157,6 +167,8 @@ const ANCESTRIES = [
   },
   {
     id: 'tiefling', name: '魔筋', blurb: '遠い昔に交わった異界の血。影と炎に好かれる。',
+    life: { adult: 18, typical: 100, oldest: 145,
+      note: '人間よりやや長い。それだけのことなのだが、村では「歳を取らない」と言われる。' },
     bonus: { cha: 2, int: 1 }, speed: 9,
     traits: [
       { id: 'hellishResilience', text: '地獄の抵抗：火ダメージ半減' },

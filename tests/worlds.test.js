@@ -71,6 +71,35 @@ test('the catalogue summarises each world', () => {
   for (const card of cards) assert.ok(card.name && card.icon && card.classes > 0);
 });
 
+/* 出自の4つが名前も説明も持たないまま出ていた。選ぶ画面では空欄になる——
+   el() は undefined を黙って捨てるので、エラーにもならず気づけなかった。 */
+test('選ばせるものには、すべて名前と説明がある', () => {
+  for (const world of WORLDS) {
+    for (const [what, list] of [['種族', world.ancestries], ['クラス', world.classes], ['経歴', world.backgrounds]]) {
+      for (const entry of list) {
+        assert.ok(entry.name, `${world.id}/${what}/${entry.id}: 名前がない`);
+        assert.ok(entry.blurb, `${world.id}/${what}/${entry.id}: 説明がない`);
+      }
+    }
+  }
+});
+
+/* 「種族の平均寿命とかも知りたい」から。どれだけ生きるかは、その種族が
+   村でどう扱われるかまで決めるので、書いたら世界の側の事実として扱う。 */
+test('種族には寿命が書いてある', () => {
+  for (const world of WORLDS) {
+    for (const a of world.ancestries) {
+      assert.ok(a.life, `${world.id}/${a.name}: 寿命がない`);
+      assert.ok(a.life.note, `${world.id}/${a.name}: 寿命に一言がない`);
+      assert.equal(typeof a.life.typical, 'number', `${world.id}/${a.name}: 平均が数値でない`);
+      if (a.life.typical) {
+        assert.ok(a.life.adult < a.life.typical, `${world.id}/${a.name}: 成人年齢が平均寿命以上`);
+        assert.ok(a.life.oldest >= a.life.typical, `${world.id}/${a.name}: 最長が平均より短い`);
+      }
+    }
+  }
+});
+
 /* ----------------------------------------------------------- live content */
 
 test('switching worlds swaps the content layer', () => {

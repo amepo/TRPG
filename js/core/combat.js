@@ -39,8 +39,14 @@ export function spawnMonster(id, { rng = new Rng(), suffix = '', override = {} }
   };
 }
 
-/** Turn a group spec into combatants: ['goblin', 'goblin', 'wolf'] → named A/B. */
-export function spawnGroup(ids, rng = new Rng()) {
+/**
+ * Turn a group spec into combatants: ['goblin', 'goblin', 'wolf'] → named A/B.
+ * @param {string[]} ids
+ * @param {object} [rng]
+ * @param {(id:string)=>string|object} [resolve] id から雛形を引き当てる。
+ *   シナリオが自前の敵を持っているとき、そちらを先に見るために渡す。
+ */
+export function spawnGroup(ids, rng = new Rng(), resolve = id => id) {
   const counts = {};
   for (const id of ids) counts[id] = (counts[id] || 0) + 1;
   const seen = {};
@@ -48,7 +54,7 @@ export function spawnGroup(ids, rng = new Rng()) {
   return ids.map(id => {
     seen[id] = (seen[id] || 0) + 1;
     const suffix = counts[id] > 1 ? letters[seen[id] - 1] : '';
-    return spawnMonster(id, { rng, suffix });
+    return spawnMonster(resolve(id), { rng, suffix });
   });
 }
 

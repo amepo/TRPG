@@ -225,6 +225,23 @@ export function validate(scenario, { monsters = {} } = {}) {
     if (!ids.has(target)) errors.push(`${where}: リンク先 "${target}" が存在しません`);
   };
 
+  /* 自作の敵。攻撃を持たない敵は、立っているだけで何もしない——
+     戦闘が終わらないので、これは警告ではなく間違いとして出す。 */
+  for (const [id, monster] of Object.entries(scenario?.monsters || {})) {
+    const where = `敵「${monster.name || id}」`;
+    if (!monster.name) warnings.push(`${where}: 名前が未設定です`);
+    if (!(monster.attacks || []).length) errors.push(`${where}: 攻撃が1つもありません`);
+    for (const attack of monster.attacks || []) {
+      if (!attack.damage) errors.push(`${where}: 攻撃「${attack.name || '無題'}」のダメージが未設定です`);
+    }
+    const hp = monster.hpAvg ?? (monster.hp ? 1 : 0);
+    if (!hp) errors.push(`${where}: 体力が0です`);
+    if (!Object.keys(nodes).some(n => (nodes[n].combat?.enemies || []).includes(id)
+      || (nodes[n].netrun?.ice || []).includes(id))) {
+      warnings.push(`${where}: どの場面にも出てきません`);
+    }
+  }
+
   const reachable = new Set();
   const walk = id => {
     if (!id || reachable.has(id) || !nodes[id]) return;

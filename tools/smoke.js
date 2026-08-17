@@ -646,6 +646,63 @@ try {
     if (choices) throw new Error(`条件を満たしていない選択肢が出ている（${choices}件）`);
   });
 
+  /* 「敵モブとか自分で追加したい」から。作る→戦闘に置く→遊ぶ、まで通す。 */
+  await step('工房：自作の敵を作って戦わせられる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();
+    await page.waitForSelector('.issue--ok');
+
+    await click('＋ 敵を作る');
+    await page.waitForTimeout(200);
+    const mob = page.locator('.fold').filter({ hasText: '新しい敵' }).first();
+    if (!await mob.count()) throw new Error('敵が作られていない');
+
+    // 名前を変えると、一覧の見出しもそれになる。
+    // （中身があるので details は最初から開いている。押すと閉じてしまう）
+    const nameBox = mob.locator('.input').first();
+    await nameBox.fill('錆犬');
+    await nameBox.blur();                                  // 離れたところで見出しに反映される
+    await page.waitForTimeout(300);
+    if (!await page.locator('.fold').filter({ hasText: '錆犬' }).count()) {
+      throw new Error('名前の変更が一覧に出ていない');
+    }
+
+    // その敵を場面の戦闘に置く。同じ敵を3体。
+    await page.locator('.node-row').first().click();
+    await page.locator('input[type=checkbox]').filter({ has: page.locator(':scope') }).first();
+    const fight = page.locator('label.chip').filter({ hasText: 'この場面で戦う' });
+    await fight.locator('input').check();
+    await page.waitForTimeout(250);
+    for (let i = 0; i < 3; i++) {
+      await page.locator('.select--add-enemy').first().selectOption('mob');
+      await page.waitForTimeout(200);
+    }
+    const chips = await page.locator('.chip--enemy').allInnerTexts();
+    if (chips.filter(t => t.includes('錆犬')).length < 3) {
+      throw new Error(`自作の敵が並んでいない: ${chips.join('／')}`);
+    }
+
+    // 最初から入っている敵を外して、自作の敵だけで戦う形にする。
+    // 押すたびに描き直されるので、掴んだままにせず引き直す。
+    for (let guard = 0; guard < 6; guard++) {
+      const stale = page.locator('.chip--enemy').filter({ hasNotText: '錆犬' }).first();
+      if (!await stale.count()) break;
+      await stale.click();
+      await page.waitForTimeout(200);
+    }
+
+    await click('遊ぶ');
+    await click('おまかせ4人');
+    await click('この一行で始める');
+    await page.waitForSelector('.enemy', { timeout: 5000 });
+    const names = (await page.locator('.enemy__name').allInnerTexts()).map(t => t.trim());
+    if (names.length !== 3) throw new Error(`敵が ${names.length} 体`);
+    if (new Set(names).size !== 3) throw new Error(`同じ名前で狙い分けられない: ${names.join('、')}`);
+    if (!names.every(n => n.startsWith('錆犬'))) throw new Error(`自作の敵が出ていない: ${names.join('、')}`);
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

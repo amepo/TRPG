@@ -10,7 +10,7 @@ import {
   check as abilityCheck, savingThrow, applyDamage, heal as healCreature,
   shortRest, longRest, skillMod, skillName, levelForXp, abilityName,
 } from './rules.js';
-import { Combat, spawnGroup, spawnMonster } from './combat.js';
+import { Combat, spawnGroup } from './combat.js';
 import { Netrun } from './netrun.js';
 import { useWorld, DEFAULT_WORLD } from '../worlds/index.js';
 import { recalculate, awardXp, levelUp, reviveCharacter } from './character.js';
@@ -241,13 +241,14 @@ export class Session extends EventTarget {
 
   beginCombat(spec) {
     this.checkpoint();                 // the exact point a mid-fight save rewinds to
-    const roster = (spec.enemies || []).map(id => {
+    /* シナリオが自前で持っている敵も、世界の敵と同じ道を通す。以前は
+       自作の敵が混じると一体ずつ素で作っていたので、同じ敵が3体並ぶと
+       全部「鼠」になって狙い分けられなかった。ＡＢＣを振るのは spawnGroup
+       の仕事なので、引き当てかたのほうを渡す。 */
+    const enemies = spawnGroup(spec.enemies || [], this.rng, id => {
       const custom = this.scenario.monsters?.[id];
-      return custom ? spawnMonster({ ...custom, id }, { rng: this.rng }) : id;
+      return custom ? { ...custom, id } : id;
     });
-    const enemies = roster.every(e => typeof e === 'string')
-      ? spawnGroup(roster, this.rng)
-      : roster.map(e => (typeof e === 'string' ? spawnMonster(e, { rng: this.rng }) : e));
 
     this.combat = new Combat(this.living, enemies, {
       rng: this.rng,

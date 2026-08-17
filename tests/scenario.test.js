@@ -477,3 +477,83 @@ test('走っているセッションは、自分の世界を覚えている', ()
   assert.deepEqual(session.view().choices.map(c => c.check?.label), before);
   assert.ok(MONSTERS.corpTrooper, 'この世界の敵が引けない');
 });
+
+/* ------------------------------------------------------------ 自作の敵 */
+
+/* 「敵モブとか自分で追加したい」から。エンジンは前から scenario.monsters を
+   見ていたが、そこを通ると頭数の処理を飛ばしていて、同じ敵が3体並んでも
+   全部同じ名前だった——狙い分けられない、と言われたあの形に逆戻りする。 */
+const withMob = () => normalize({
+  id: 'mob-test', title: '自作の敵の試し', start: 'fight',
+  monsters: {
+    rustHound: {
+      id: 'rustHound', name: '錆犬', kind: '獣', cr: 0.25, xp: 50,
+      acOverride: 12, hpAvg: 7, speed: 12, tactics: 'brute',
+      attacks: [{ name: '噛みつき', bonus: 3, damage: '1d6+1', type: '刺突' }],
+      blurb: '毛が抜け落ちている。においで分かる。',
+    },
+  },
+  nodes: {
+    fight: {
+      id: 'fight', title: '路地', text: ['三匹いる。'],
+      combat: { title: '錆犬の群れ', enemies: ['rustHound', 'rustHound', 'rustHound'], onVictory: { to: 'done' }, onDefeat: { to: 'done' } },
+    },
+    done: { id: 'done', title: '終わり', text: ['終わった。'], ending: { type: 'good', title: '生還', text: '街へ戻る。' } },
+  },
+});
+
+test('自作の敵も、頭数ぶん名前が振られる', () => {
+  useWorld('embers');
+  const scenario = withMob();
+  assert.equal(validate(scenario, { monsters: MONSTERS }).ok, true);
+
+  const session = new Session({ scenario, party: pregeneratedParty(), seed: 5 });
+  session.start();
+  const names = session.view().combat.targets.map(t => t.name);
+  assert.equal(names.length, 3);
+  assert.equal(new Set(names).size, 3, `同じ名前で狙い分けられない: ${names.join('、')}`);
+  for (const name of names) assert.ok(name.startsWith('錆犬'), `名前が違う: ${name}`);
+});
+
+test('自作の敵は、書いた通りの体力と攻撃で戦う', () => {
+  useWorld('embers');
+  const session = new Session({ scenario: withMob(), party: pregeneratedParty(), seed: 9 });
+  session.start();
+  // 画面には出ない値まで見たいので、live な戦闘の側を確かめる。
+  for (const enemy of session.combat.enemies) {
+    assert.equal(enemy.maxHp, 7, '体力が書いた通りでない');
+    assert.equal(enemy.acOverride, 12, 'AC が書いた通りでない');
+    assert.equal(enemy.attacks[0].damage, '1d6+1', '攻撃が書いた通りでない');
+    assert.equal(enemy.xp, 50, '経験点が引き継がれていない');
+  }
+});
+
+test('攻撃のない敵と、体力0の敵は点検で止まる', () => {
+  const broken = normalize({
+    id: 'broken', title: '壊れた敵', start: 'a',
+    monsters: {
+      ghost: { id: 'ghost', name: '案山子', cr: 0, xp: 10, hpAvg: 8, attacks: [] },
+      hollow: { id: 'hollow', name: '空', cr: 0, xp: 10, hpAvg: 0, attacks: [{ name: '殴る', damage: '1d4' }] },
+    },
+    nodes: {
+      a: {
+        id: 'a', title: '場面', text: ['戦う。'],
+        combat: { enemies: ['ghost', 'hollow'], onVictory: { to: 'a' } },
+      },
+    },
+  });
+  const result = validate(broken, { monsters: MONSTERS });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(e => e.includes('案山子') && e.includes('攻撃')), result.errors.join('／'));
+  assert.ok(result.errors.some(e => e.includes('空') && e.includes('体力')), result.errors.join('／'));
+});
+
+test('どこにも出てこない自作の敵は警告になる', () => {
+  const unused = normalize({
+    id: 'unused', title: '出番なし', start: 'a',
+    monsters: { extra: { id: 'extra', name: '出番のない敵', cr: 0, xp: 10, hpAvg: 5, attacks: [{ name: '殴る', damage: '1d4' }] } },
+    nodes: { a: { id: 'a', title: '場面', text: ['何もない。'], ending: { type: 'good', title: '終', text: '終わり。' } } },
+  });
+  const result = validate(unused, { monsters: MONSTERS });
+  assert.ok(result.warnings.some(w => w.includes('出番のない敵')), result.warnings.join('／'));
+});

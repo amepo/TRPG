@@ -69,9 +69,29 @@ export function spellSlots(level, halfCaster = false) {
   return table[Math.min(10, Math.max(1, effective))] || { 1: 2 };
 }
 
-/** Rough encounter budget: sum of XP scaled by party size. */
-export function encounterDifficulty(monsterIds, partyLevel = 1, partySize = 1) {
-  const xp = monsterIds.reduce((s, id) => s + (monsterById(id)?.xp || 0), 0);
+/* 手ごわさ（CR）と経験点の対応。工房で敵を作るとき、CR を選べば経験点が
+   決まるようにするために置いてある。ここがずれると、想定難易度の表示も、
+   倒したときに配る経験点も、まとめて狂う。 */
+export const CR_XP = {
+  0: 10, 0.125: 25, 0.25: 50, 0.5: 100,
+  1: 200, 2: 450, 3: 700, 4: 1100, 5: 1800,
+  6: 2300, 7: 2900, 8: 3900, 9: 5000, 10: 5900,
+};
+
+/** その手ごわさの敵は何点ぶんか。表にない値は近いほうへ寄せる。 */
+export function xpForCr(cr) {
+  if (CR_XP[cr] !== undefined) return CR_XP[cr];
+  const steps = Object.keys(CR_XP).map(Number).sort((a, b) => a - b);
+  const near = steps.reduce((best, c) => (Math.abs(c - cr) < Math.abs(best - cr) ? c : best), steps[0]);
+  return CR_XP[near];
+}
+
+/**
+ * Rough encounter budget: sum of XP scaled by party size.
+ * @param {object} [extra] シナリオが自前で持っている敵。世界の敵より先に見る。
+ */
+export function encounterDifficulty(monsterIds, partyLevel = 1, partySize = 1, extra = {}) {
+  const xp = monsterIds.reduce((s, id) => s + ((extra[id] || monsterById(id))?.xp || 0), 0);
   const multiplier = monsterIds.length >= 5 ? 2 : monsterIds.length >= 3 ? 1.5 : monsterIds.length === 2 ? 1.25 : 1;
   const adjusted = xp * multiplier;
   const budgetPerChar = { 1: 25, 2: 50, 3: 75, 4: 125, 5: 250 }[Math.min(5, partyLevel)] || 250;
