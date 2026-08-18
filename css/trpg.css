@@ -469,3 +469,7 @@ a { color: var(--gold); }
 .costs__row > span { padding: 4px 0; background: var(--bg-2); border-radius: 4px; }
 .costs__row--head > span { color: var(--gold); }
 .costs__label { text-align: left; padding-left: 6px !important; color: var(--ink-dim); background: none !important; }
+
+/* 場面の絞り込み欄。一覧の上にくっつけて置く。 */
+.input--find { font-size: 13px; min-height: 34px; }
+.input--node-id { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }

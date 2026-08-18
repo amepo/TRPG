@@ -46,6 +46,11 @@ export class Session extends EventTarget {
     this.pending = null;              // a check waiting for the player to pick who rolls
     this.startedAt = Date.now();
     this.turnCount = 0;
+    /* 出発したときの姿。冒険が終わったとき「何が変わったか」を出すために要る。
+       レベルも経験点も所持金も、終わったあとで持ち越せなければ、上がった
+       意味がどこにも残らない。 */
+    this.opening = Object.fromEntries(this.party.map(pc =>
+      [pc.id, { level: pc.level, xp: pc.xp || 0, gold: pc.gold || 0 }]));
   }
 
   /* ------------------------------------------------------------ plumbing */
@@ -465,9 +470,27 @@ export class Session extends EventTarget {
 
   /* -------------------------------------------------------------- ending */
 
+  /**
+   * 完走報酬。敵を倒したぶんだけでは、どのシナリオも1本でレベル2に届かない
+   * （必要300点に対して、全部倒しても一人50〜450点）。物語を最後まで運んだ
+   * ことにも点を出す——避けて通った道にも意味を持たせるため。
+   * 苦い結末は半分。何も持ち帰れなかったわけではない、という扱い。
+   */
+  completionXp(ending) {
+    const base = 100 * Math.max(1, this.scenario.level || 1);
+    return ending?.type === 'bad' ? Math.floor(base / 2) : base;
+  }
+
   finish(ending) {
     this.finished = true;
     this.ending = ending;
+    /* 経験点は結末を語る前に配る。「レベルが上がった」が結末の後ろに
+       流れると、終わったあとの追記に見えてしまう。 */
+    const bonus = this.completionXp(ending);
+    if (bonus) {
+      this.say(`【${this.scenario.title}】を走り抜けた。`, 'system');
+      this.grantXp(bonus * this.party.length);
+    }
     this.say(ending.title || '結末', 'scene');
     for (const p of [].concat(ending.text || [])) this.say(interpolate(p, this.ctx()), 'narration');
     this.say(`— 物語は終わった（${{ good: '良い結末', bad: '苦い結末', neutral: 'ひとつの結末' }[ending.type] || '結末'}） —`,
@@ -507,9 +530,27 @@ export class Session extends EventTarget {
       flags: [...this.flags],
       finished: this.finished,
       ending: this.ending,
+      growth: this.finished ? this.growth() : null,
       canRest: !this.combat && !this.netrun && !this.finished,
       world: this.world,
     };
+  }
+
+  /**
+   * 冒険で何が変わったか。出発したときとの差。
+   * @returns {{id, name, portrait, level, levelFrom, xp, xpGained, gold, goldGained, dead}[]}
+   */
+  growth() {
+    return this.party.map(pc => {
+      const was = this.opening?.[pc.id] || { level: pc.level, xp: pc.xp || 0, gold: pc.gold || 0 };
+      return {
+        id: pc.id, name: pc.name, portrait: pc.portrait,
+        level: pc.level, levelFrom: was.level,
+        xp: pc.xp || 0, xpGained: (pc.xp || 0) - was.xp,
+        gold: pc.gold || 0, goldGained: (pc.gold || 0) - was.gold,
+        dead: !!pc.dead,
+      };
+    });
   }
 
   /* ------------------------------------------------------------- persistence */
@@ -533,6 +574,7 @@ export class Session extends EventTarget {
       finished: this.finished,
       ending: this.ending,
       startedAt: this.startedAt,
+      opening: this.opening,
       savedAt: Date.now(),
       // Set when the save rewound: loading replays the fight from its start.
       inCombat: !!point,
@@ -555,6 +597,10 @@ export class Session extends EventTarget {
     session.finished = !!data.finished;
     session.ending = data.ending || null;
     session.startedAt = data.startedAt || Date.now();
+    /* 出発時の姿。古いセーブには入っていないので、そのときは「今の姿から
+       何も変わっていない」ことにする——嘘の増分を出すよりましだ。 */
+    session.opening = data.opening
+      || Object.fromEntries(session.party.map(pc => [pc.id, { level: pc.level, xp: pc.xp || 0, gold: pc.gold || 0 }]));
 
     if (data.inCombat && session.node?.combat) {
       session.say('（戦闘は場面の最初からやり直しになる）', 'system');
@@ -565,9 +611,13 @@ export class Session extends EventTarget {
 }
 
 /** Pick the two ability bumps that help this character most. */
+/* レベル4・6・8で上げる能力値。クラスが欲しがるところと、耐久。
+   世界ごとのクラス名を並べた表を持っていたので、サイバーパンク側の役割は
+   どれも「耐久・耐久」になっていた——ソロが敏捷を上げなかったのはこのため。
+   クラス自身が primary を持っているので、そちらを読む。 */
 function bestBumps(pc) {
-  const order = { fighter: ['str', 'con'], rogue: ['dex', 'con'], mage: ['int', 'con'], cleric: ['wis', 'con'], ranger: ['dex', 'wis'] };
-  return order[pc.classId] || ['con', 'con'];
+  const primary = classById(pc.classId)?.primary || 'con';
+  return [primary, 'con'];
 }
 
 export { MONSTERS };

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   testCondition, applyEffects, validate, blankScenario, normalize, describe,
-  interpolate, nodeText, describeCondition,
+  interpolate, nodeText, describeCondition, retarget,
 } from '../js/core/scenario.js';
 import { Session } from '../js/core/engine.js';
 import { BUILT_IN, byId, catalogue } from '../js/scenarios/index.js';
@@ -556,4 +556,117 @@ test('どこにも出てこない自作の敵は警告になる', () => {
   });
   const result = validate(unused, { monsters: MONSTERS });
   assert.ok(result.warnings.some(w => w.includes('出番のない敵')), result.warnings.join('／'));
+});
+
+/* --------------------------------------------------- 場面の付け替え */
+
+/* node12_a3f のままでは、行き先の一覧で同じ見出しが並んだとき見分けがつかない。
+   手で付け替えるとリンクが切れるので、道具のほうで全部書き換える。 */
+test('場面の id を変えても、参照はすべて追従する', () => {
+  const scenario = normalize({
+    id: 'rename', title: '付け替え', start: 'old',
+    nodes: {
+      old: {
+        id: 'old', title: '元の場面', text: ['ここ。'],
+        choices: [
+          { text: 'そのまま', to: 'old' },
+          {
+            text: '調べる',
+            check: { skill: 'perception', dc: 10, advantageIf: { visited: 'old' }, success: { to: 'old' }, fail: { to: 'other' } },
+            if: { all: [{ visited: 'old' }, { flag: 'x' }] },
+          },
+        ],
+      },
+      other: {
+        id: 'other', title: 'もう一つ', text: ['そこ。'],
+        combat: { enemies: ['direRat'], onVictory: { to: 'old' }, onDefeat: { to: 'old' }, onFlee: { to: 'old' } },
+        choices: [{ text: '戻る', to: 'old', requires: { visited: 'old' } }],
+      },
+    },
+  });
+
+  retarget(scenario, 'old', 'square');
+  // retarget は条件だけを見る。リンクの側はエディタが持っている。
+  assert.equal(scenario.nodes.old.choices[1].if.all[0].visited, 'square');
+  assert.equal(scenario.nodes.old.choices[1].check.advantageIf.visited, 'square');
+  assert.equal(scenario.nodes.other.choices[0].requires.visited, 'square');
+});
+
+/* 逆に、どこからも来られない場面は点検が拾う。付け替えで切れたら気づける。 */
+test('付け替えでリンクが切れたら、点検が見つける', () => {
+  const scenario = normalize({
+    id: 'broken-link', title: '切れた', start: 'a',
+    nodes: {
+      a: { id: 'a', title: 'はじめ', text: ['…'], choices: [{ text: '進む', to: 'ghost' }] },
+      b: { id: 'b', title: 'おわり', text: ['…'], ending: { type: 'good', title: '終', text: '終わり。' } },
+    },
+  });
+  const result = validate(scenario, { monsters: MONSTERS });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(e => e.includes('ghost')), result.errors.join('／'));
+});
+
+/* ------------------------------------------------- 持ち越しと成長 */
+
+/* 敵を倒したぶんだけでは、どのシナリオも1本ではレベル2（300点）に届かない。
+   全部倒しても一人50〜450点で、そのうえ冒険が終われば一行ごと消えていた。
+   物語を運び切ったことにも点を出し、終わったあとの姿を残せるようにする。 */
+const oneScene = (level, type) => normalize({
+  id: `finish-${type}`, title: 'すぐ終わる', start: 'end', level,
+  nodes: { end: { id: 'end', title: '終', text: ['終わり。'], ending: { type, title: '終', text: '終わった。' } } },
+});
+
+test('物語を走り抜けると、想定レベルに応じた経験点が入る', () => {
+  useWorld('embers');
+  const party = pregeneratedParty();
+  const before = party[0].xp || 0;
+
+  const session = new Session({ scenario: oneScene(2, 'good'), party, seed: 1 });
+  session.start();
+  assert.equal(session.finished, true);
+  assert.equal(session.party[0].xp - before, 200, '想定レベル2なら一人200点');
+});
+
+test('苦い結末でも半分は残る', () => {
+  useWorld('embers');
+  const session = new Session({ scenario: oneScene(2, 'bad'), party: pregeneratedParty(), seed: 1 });
+  session.start();
+  assert.equal(session.party[0].xp, 100);
+});
+
+test('レベルが上がると、その場でクラスの特典がつく', () => {
+  useWorld('embers');
+  const party = pregeneratedParty();
+  for (const pc of party) pc.xp = 250;              // レベル2まであと50
+  const session = new Session({ scenario: oneScene(1, 'good'), party, seed: 1 });
+  session.start();
+
+  assert.equal(session.party[0].level, 2, '300点を越えてもレベルが上がっていない');
+  assert.ok(session.party[0].features.some(f => f.level === 2), '2レベルの特典が付いていない');
+});
+
+test('冒険が終わると、出発時との差が読み取れる', () => {
+  useWorld('embers');
+  const party = pregeneratedParty();
+  const goldBefore = party[0].gold || 0;
+
+  const session = new Session({ scenario: oneScene(1, 'good'), party, seed: 1 });
+  const view = session.start();
+  const [first] = view.growth;
+
+  assert.equal(first.xpGained, 100);
+  assert.equal(first.levelFrom, 1);
+  assert.equal(first.gold, goldBefore, '所持金が勝手に動いている');
+  assert.equal(first.goldGained, 0);
+});
+
+/* セーブして読み直しても、出発時の姿を忘れない。 */
+test('途中で保存しても、持ち帰ったものの差は狂わない', () => {
+  useWorld('embers');
+  const party = pregeneratedParty();
+  const session = new Session({ scenario: oneScene(3, 'good'), party, seed: 1 });
+  session.start();
+
+  const restored = Session.load(JSON.parse(JSON.stringify(session.save())));
+  assert.equal(restored.view().growth[0].xpGained, 300, '読み直したら増分が消えた');
 });

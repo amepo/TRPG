@@ -766,6 +766,86 @@ try {
     }
   });
 
+  /* 20場面規模で書くための道具。付け替え・絞り込み・逆リンク。 */
+  await step('工房：場面の id を付け替えても行き先が切れない', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();
+    await page.waitForSelector('.issue--ok');
+
+    const idBox = page.locator('.input--node-id').first();
+    const before = await idBox.inputValue();
+    await idBox.fill('hiroba');
+    await idBox.blur();
+    await page.waitForTimeout(300);
+
+    if (await page.locator('.issue').filter({ hasText: '存在しません' }).count()) {
+      throw new Error('付け替えでリンクが切れた');
+    }
+    const list = await page.locator('.node-list').innerText();
+    if (!list.includes('hiroba')) throw new Error(`一覧に新しい id が出ていない: ${list}`);
+    if (list.includes(before)) throw new Error('古い id が残っている');
+  });
+
+  await step('工房：この場面へ来る道が出る', async () => {
+    // 見本を開くと、繋がった場面がひととおり入っている。
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await page.getByText('見本から始める').waitFor();
+    await page.getByRole('button', { name: '開く' }).first().click();
+    await page.locator('.node-row').first().waitFor();
+
+    // 開始でない場面を開くと、来る道が出る。
+    await page.locator('.node-row').nth(1).click();
+    await page.waitForTimeout(250);
+    const body = await page.locator('.play').innerText();
+    if (!/この場面へ来る道|ここへ来る道がありません/.test(body)) {
+      throw new Error('来る道の欄が出ていない');
+    }
+  });
+
+  /* 冒険が終わったあと、一行を次へ連れて行けるか。ここまで、経験点も
+     レベルも終わった瞬間に消えていた。 */
+  await step('冒険の終わりに、持ち帰ったものが出て保存できる', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.removeItem('trpg.chars'));
+    await click('ソロプレイ');
+    await page.getByRole('button', { name: /はじめての依頼/ }).first().click();
+    await click('おまかせ4人');
+    await click('この一行で始める');
+    await page.locator('.log__line').first().waitFor();
+
+    // 結末まで走る。判定は誰かに振らせ、戦闘は殴り続ける。
+    for (let i = 0; i < 60; i++) {
+      if (await page.getByText('この一行が持ち帰ったもの').count()) break;
+      const action = page.locator('.action:not([disabled])').first();
+      if (await action.count()) { await action.click(); await page.waitForTimeout(120); await resolveSheet(); continue; }
+      const choice = page.locator('.choice:not([disabled])').first();
+      if (!await choice.count()) break;
+      await choice.click();
+      await page.waitForTimeout(140);
+      await resolveSheet();
+    }
+
+    const card = page.locator('.card').filter({ hasText: 'この一行が持ち帰ったもの' });
+    if (!await card.count()) throw new Error('持ち帰ったものの欄が出ていない');
+    if (!/経験点 \+/.test(await card.innerText())) throw new Error('経験点が入っていない');
+
+    await card.getByRole('button', { name: /この一行を保存する/ }).click();
+    await page.waitForTimeout(300);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('trpg.chars') || '[]').length);
+    if (!saved) throw new Error('一行が保存されていない');
+
+    // 保存した人物を、次の冒険に連れて行ける。
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.getByRole('button', { name: /はじめての依頼/ }).first().click();
+    await click('保存済みから');
+    const sheet = await page.locator('dialog[open]').innerText();
+    if (/出していません|まだありません/.test(sheet)) throw new Error('保存した一行が一覧に出ない');
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

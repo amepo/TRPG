@@ -3,9 +3,9 @@
 import { el, frag, clear, toast, openSheet, closeSheet, confirmSheet, button, richText } from './dom.js';
 import { partyList, openCharacterSheet } from './sheet.js';
 import { Session } from '../core/engine.js';
-import { skillName } from '../core/rules.js';
+import { skillName, xpToNext } from '../core/rules.js';
 import { label, ENEMY_ICONS } from '../core/content.js';
-import { putSave } from '../core/store.js';
+import { putSave, putCharacter } from '../core/store.js';
 import { useWorld } from '../worlds/index.js';
 
 export class SoloScreen {
@@ -82,6 +82,49 @@ export class SoloScreen {
 
   /* ------------------------------------------------------------ choices */
 
+  /* 冒険が終わったあとの一行。ここまで、経験点も所持金もレベルも、
+     終わった瞬間に消えていた——持ち越せなければ、上がった意味がどこにも
+     残らない。次の依頼へ連れて行けるようにする。 */
+  growthCard(view) {
+    const growth = view.growth || [];
+    if (!growth.length) return el('span');
+
+    const row = g => {
+      const gained = [];
+      if (g.xpGained) gained.push(`経験点 +${g.xpGained}`);
+      if (g.goldGained) gained.push(`${label('gold', '所持金')} ${g.goldGained > 0 ? '+' : ''}${g.goldGained}`);
+      return el('div', { class: 'kv' }, [
+        el('span', { class: 'kv__k' }, [
+          `${g.portrait || '🎲'} ${g.name}`,
+          g.level > g.levelFrom
+            ? el('span', { class: 'tag', style: { marginLeft: '6px' }, text: `Lv${g.levelFrom} → ${g.level}` })
+            : el('span', { class: 'tiny faint', text: ` Lv${g.level}` }),
+          g.dead ? el('span', { class: 'tag tag--bad', style: { marginLeft: '6px' }, text: '死亡' }) : null,
+        ]),
+        el('span', { class: 'tiny muted', text: gained.join('／') || '—' }),
+      ]);
+    };
+
+    const alive = growth.filter(g => !g.dead);
+    const toNext = alive.length ? xpToNext(Math.min(...alive.map(g => g.xp))) : null;
+
+    return el('div', { class: 'card stack' }, [
+      el('h3', { class: 'card__title', text: 'この一行が持ち帰ったもの' }),
+      el('div', {}, growth.map(row)),
+      toNext ? el('p', { class: 'tiny faint', text: `次のレベルまであと ${toNext} 点。` }) : null,
+      el('p', { class: 'tiny faint', text: '保存すると、次の依頼に同じ一行を連れて行けます（一行を決める画面の「保存済みから」）。' }),
+      button(`この一行を保存する（${alive.length}人）`, () => {
+        let saved = 0;
+        for (const pc of this.session.party) {
+          if (pc.dead) continue;
+          putCharacter(pc);
+          saved += 1;
+        }
+        toast(saved ? `${saved}人を保存しました` : '保存できる人がいません');
+      }, 'btn btn--primary btn--block'),
+    ]);
+  }
+
   drawChoices(view) {
     const box = clear(this.choiceBox);
 
@@ -94,6 +137,7 @@ export class SoloScreen {
           button('タイトルへ戻る', () => this.app.go('home'), 'btn btn--primary'),
         ]),
       ]));
+      box.append(this.growthCard(view));
       return;
     }
 

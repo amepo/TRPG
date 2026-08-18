@@ -6,7 +6,7 @@
 
 import { el, frag, clear, toast, openSheet, closeSheet, confirmSheet, field, button } from './dom.js';
 import {
-  blankScenario, validate, describe, normalize,
+  blankScenario, validate, describe, normalize, retarget,
 } from '../core/scenario.js';
 import { ABILITIES, SKILLS, skillName, DIFFICULTY } from '../core/rules.js';
 import { MONSTERS, ITEMS, encounterDifficulty, CR_XP, xpForCr } from '../core/content.js';
@@ -388,25 +388,122 @@ export class EditorScreen {
   }
 
   nodesCard(nodeIds) {
+    /* 20場面を超えると、一覧をスクロールして探す時間のほうが長くなる。
+       見出しでも id でも引っかかるようにして、絞り込みは描き直しを挟まない
+       （打つたびに再描画すると、入力欄から指が外れる）。 */
+    const query = (this.nodeQuery || '').trim().toLowerCase();
+    const matches = id => {
+      if (!query) return true;
+      const node = this.scenario.nodes[id];
+      return `${id} ${node.title || ''} ${[].concat(node.text || []).join(' ')}`
+        .toLowerCase().includes(query);
+    };
+    const shown = nodeIds.filter(matches);
+
     return el('div', { class: 'card card--flat stack' }, [
       el('div', { class: 'spread' }, [
-        el('h3', { class: 'card__title', text: `場面（${nodeIds.length}）` }),
+        el('h3', {
+          class: 'card__title',
+          text: query ? `場面（${shown.length}／${nodeIds.length}）` : `場面（${nodeIds.length}）`,
+        }),
         button('＋ 場面を足す', () => { this.mark(); this.addNode(); }, 'btn btn--sm'),
       ]),
-      el('div', { class: 'node-list' }, nodeIds.map(id => {
-        const node = this.scenario.nodes[id];
-        return el('button', {
-          class: 'node-row', 'aria-current': id === this.nodeId,
-          onclick: () => { this.nodeId = id; this.render(); },
-        }, [
-          el('span', { class: 'node-row__title', text: node.title || '（無題）' }),
-          node.combat ? el('span', { class: 'badge badge--combat', text: '戦' }) : null,
-          node.ending ? el('span', { class: 'badge badge--end', text: '終' }) : null,
-          id === this.scenario.start ? el('span', { class: 'badge', text: '始' }) : null,
-          el('span', { class: 'node-row__id', text: id }),
-        ]);
-      })),
+      nodeIds.length > 6 ? el('input', {
+        class: 'input input--find', value: this.nodeQuery || '', placeholder: '見出し・本文・id で絞る',
+        oninput: e => {
+          this.nodeQuery = e.target.value;
+          const list = this.root.querySelector('.node-list');
+          if (list) clear(list).append(...this.nodeRows(nodeIds.filter(matches)));
+        },
+      }) : null,
+      el('div', { class: 'node-list' }, this.nodeRows(shown)),
     ]);
+  }
+
+  nodeRows(ids) {
+    if (!ids.length) return [el('p', { class: 'tiny faint', text: '見つかりません。' })];
+    return ids.map(id => {
+      const node = this.scenario.nodes[id];
+      return el('button', {
+        class: 'node-row', 'aria-current': id === this.nodeId,
+        onclick: () => { this.nodeId = id; this.render(); },
+      }, [
+        el('span', { class: 'node-row__title', text: node.title || '（無題）' }),
+        node.combat ? el('span', { class: 'badge badge--combat', text: '戦' }) : null,
+        node.netrun ? el('span', { class: 'badge', text: '侵' }) : null,
+        node.ending ? el('span', { class: 'badge badge--end', text: '終' }) : null,
+        id === this.scenario.start ? el('span', { class: 'badge', text: '始' }) : null,
+        el('span', { class: 'node-row__id', text: id }),
+      ]);
+    });
+  }
+
+  /* ------------------------------------------------------------ 繋がり */
+
+  /**
+   * その場面へ来る道。出口は編集できるのに入口が見えないと、20場面を
+   * 一つずつ開いて探すことになる。点検は孤立を教えてくれるが、
+   * 繋ぎ直すには「どこから来るのか」が要る。
+   * @returns {{from:string, how:string}[]}
+   */
+  waysInto(target) {
+    const ways = [];
+    for (const node of Object.values(this.scenario.nodes)) {
+      const title = node.title || node.id;
+      const add = how => ways.push({ from: node.id, title, how });
+      for (const choice of node.choices || []) {
+        if (choice.to === target) add(`「${choice.text || '選択肢'}」`);
+        if (choice.check?.success?.to === target) add(`「${choice.text || '選択肢'}」の成功`);
+        if (choice.check?.fail?.to === target) add(`「${choice.text || '選択肢'}」の失敗`);
+      }
+      if (node.combat?.onVictory?.to === target) add('戦闘に勝つ');
+      if (node.combat?.onDefeat?.to === target) add('戦闘に負ける');
+      if (node.combat?.onFlee?.to === target) add('戦闘から逃げる');
+      if (node.netrun?.onSuccess?.to === target) add('侵入を抜ける');
+      if (node.netrun?.onTraced?.to === target) add('逆探知される');
+    }
+    return ways;
+  }
+
+  /**
+   * 場面の id を付け替え、参照しているところを全部書き換える。
+   * node12_a3f のままでは、行き先の選択肢で同じ見出しが並んだとき見分けが
+   * つかない。付け替えを手でやると必ずリンクが切れるので、道具のほうでやる。
+   */
+  renameNode(node, next) {
+    const id = String(next || '').trim();
+    if (!id || id === node.id) return false;
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) { toast('英数字と _ - だけが使えます'); return false; }
+    if (this.scenario.nodes[id]) { toast('その id はもう使われています'); return false; }
+
+    this.mark();
+    const from = node.id;
+    const swap = obj => { if (obj && obj.to === from) obj.to = id; };
+
+    for (const other of Object.values(this.scenario.nodes)) {
+      for (const choice of other.choices || []) {
+        swap(choice);
+        swap(choice.check?.success);
+        swap(choice.check?.fail);
+      }
+      for (const key of ['onVictory', 'onDefeat', 'onFlee']) swap(other.combat?.[key]);
+      for (const key of ['onSuccess', 'onTraced']) swap(other.netrun?.[key]);
+    }
+    // 条件の「あの場面を通った」も id で書いてある。
+    retarget(this.scenario, from, id);
+
+    /* 並び順は書いた順のまま残したいので、詰め直して入れ替える。 */
+    const rebuilt = {};
+    for (const [key, value] of Object.entries(this.scenario.nodes)) {
+      if (key === from) rebuilt[id] = { ...value, id };
+      else rebuilt[key] = value;
+    }
+    this.scenario.nodes = rebuilt;
+    if (this.scenario.start === from) this.scenario.start = id;
+    this.nodeId = id;
+    this.save();
+    this.render();
+    return true;
   }
 
   /* ------------------------------------------------------ 自作のアイテム */
@@ -708,12 +805,32 @@ export class EditorScreen {
 
     return el('div', { class: 'card stack' }, [
       el('div', { class: 'spread' }, [
-        el('h3', { class: 'card__title', text: `場面：${node.id}` }),
+        el('h3', { class: 'card__title', text: node.title || '（無題）' }),
         el('div', { class: 'row', style: { gap: '5px' } }, [
           button('複製', () => { this.mark(); this.duplicateNode(node); }, 'btn btn--sm'),
           button('削除', () => this.removeNode(node), 'btn btn--sm btn--danger'),
         ]),
       ]),
+
+      /* この場面へ来る道。出口だけ編集できて入口が見えないと、繋ぎ直すのに
+         20場面を一つずつ開くことになる。押せば、その場面へ跳ぶ。 */
+      (() => {
+        const ways = this.waysInto(node.id);
+        const isStart = this.scenario.start === node.id;
+        if (!ways.length && !isStart) {
+          return el('p', { class: 'issue issue--warn', text: 'ここへ来る道がありません。どこからも辿り着けない場面です。' });
+        }
+        return el('div', { class: 'stack', style: { gap: '4px' } }, [
+          el('p', { class: 'tiny faint', text: `この場面へ来る道（${ways.length + (isStart ? 1 : 0)}）` }),
+          el('div', { class: 'chips' }, [
+            isStart ? el('span', { class: 'chip', text: 'ここから始まる' }) : null,
+            ...ways.map(w => el('button', {
+              class: 'chip',
+              onclick: () => { this.nodeId = w.from; this.render(); },
+            }, [`${w.title} ▸ ${w.how}`])),
+          ]),
+        ]);
+      })(),
 
       field('見出し', el('input', {
         class: 'input', value: node.title || '',
@@ -728,6 +845,17 @@ export class EditorScreen {
         value: [].concat(node.text || []).join('\n'),
         oninput: e => { node.text = e.target.value.split('\n'); this.typed(); },
       })),
+
+      /* id は自分で付けられる。node12_a3f のままだと、行き先の一覧で
+         同じ見出しが並んだときに見分けがつかない。 */
+      el('div', { class: 'row' }, [
+        el('div', { class: 'grow' }, [field('この場面の id（行き先の指定に使う名前）', el('input', {
+          class: 'input input--node-id', value: node.id, spellcheck: 'false',
+          onchange: e => {
+            if (!this.renameNode(node, e.target.value)) e.target.value = node.id;
+          },
+        }))]),
+      ]),
 
       el('hr', { class: 'divider' }),
       this.foldable(

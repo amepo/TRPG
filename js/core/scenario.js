@@ -204,6 +204,27 @@ export function nodeText(node, ctx) {
 /* ------------------------------------------------------------- validation */
 
 /**
+ * 場面の id が変わったとき、条件の中の参照を書き換える。
+ * リンク（to）はエディタ側が持っているが、条件は入れ子になるのでここで潜る。
+ * @param {object} scenario 直接書き換える
+ */
+export function retarget(scenario, from, to) {
+  const walk = cond => {
+    if (!cond || typeof cond !== 'object') return;
+    if (Array.isArray(cond)) { cond.forEach(walk); return; }
+    if (cond.visited === from) cond.visited = to;
+    for (const key of ['all', 'any', 'not']) if (cond[key]) walk(cond[key]);
+  };
+  for (const node of Object.values(scenario?.nodes || {})) {
+    for (const choice of node.choices || []) {
+      walk(choice.if);
+      walk(choice.requires);
+      walk(choice.check?.advantageIf);
+    }
+  }
+}
+
+/**
  * Check a scenario for broken links and obvious mistakes.
  * The editor shows these; the loader refuses to start on errors.
  * @returns {{errors:string[], warnings:string[], ok:boolean}}
