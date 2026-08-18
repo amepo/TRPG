@@ -35,12 +35,21 @@ export function rollTable(table, rng) {
   return rng ? rng.pick(t.entries) : t.entries[Math.floor(Math.random() * t.entries.length)];
 }
 
-/** その世界らしい名前を1つ。姓を持つ世界なら姓もつける。 */
+/**
+ * その世界らしい名前を1つ。
+ *
+ * 世界によって名前の作りが違う。企業の街では全員が登録された姓を持つが、
+ * 灯火の地方では姓を名乗れるのは一部の人間だけで、大半は「どこの誰」で
+ * 呼ばれる——粉屋のミラ、ヴェルナのガレス。bynames はその「どこの」にあたる。
+ */
 export function randomName(rng) {
-  const { given = [], family = [] } = LORE.names || {};
+  const { given = [], family = [], bynames = [] } = LORE.names || {};
   if (!given.length) return null;
   const pick = list => (rng ? rng.pick(list) : list[Math.floor(Math.random() * list.length)]);
+  const chance = () => (rng ? rng.float() : Math.random());
   const first = pick(given);
-  if (!family.length) return first;
-  return `${first}・${pick(family)}`;
+  if (family.length) return `${first}・${pick(family)}`;
+  // 三人に二人は出自で呼ばれる。残りは名前だけ——顔見知りのあいだではそれで足りる。
+  if (bynames.length && chance() < 0.66) return `${pick(bynames)}の${first}`;
+  return first;
 }

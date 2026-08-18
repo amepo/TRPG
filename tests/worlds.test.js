@@ -542,6 +542,33 @@ test('名前はその世界のものが出る', () => {
   assert.ok(fantasyNames.every(n => !n.includes('・')));
 });
 
+/* 「灯火世界に苗字って概念はありますか？」から。無いと答えるより、誰が
+   持っていて誰が持っていないかを決めた——名前の作りにもそれが出る。 */
+test('灯火では姓を名乗らず、出自で呼ばれる', () => {
+  useWorld('embers');
+  const rng = new Rng(21);
+  const names = Array.from({ length: 40 }, () => randomName(rng));
+
+  assert.ok(names.every(n => !n.includes('・')), '灯火に姓が混じっている');
+  const bynamed = names.filter(n => n.includes('の'));
+  assert.ok(bynamed.length >= 15, `出自で呼ばれる人が少なすぎる: ${bynamed.length}/40`);
+  assert.ok(names.some(n => !n.includes('の')), '名前だけで呼ばれる人がいない');
+
+  // 決まりごと側にも書いてあること。片方だけだと、どちらかが嘘になる。
+  const truth = LORE.truths.find(t => t.title.includes('姓'));
+  assert.ok(truth, '姓の決まりごとが読み物に無い');
+  for (const who of ['貴族', '商人', '聖職者', '学院']) {
+    assert.ok(truth.text.includes(who), `姓を名乗れる者に「${who}」が出てこない`);
+  }
+});
+
+test('ネオンでは全員が登録された姓を持つ', () => {
+  useWorld('neon');
+  const rng = new Rng(22);
+  const names = Array.from({ length: 20 }, () => randomName(rng));
+  assert.ok(names.every(n => n.includes('・')), '姓を持たない者がいる');
+});
+
 test('読み物を持たない世界でも空の器が返る', () => {
   const bare = { id: 'bare', name: '素', abilities: [], skills: [], ancestries: {}, classes: {}, backgrounds: {}, weapons: {}, armors: {}, items: {}, spells: {}, classSpells: {}, monsters: {} };
   register(bare);

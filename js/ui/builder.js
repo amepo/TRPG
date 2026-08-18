@@ -5,7 +5,7 @@
    reused by both solo play and the session tool. */
 
 import { el, frag, clear, toast, openSheet, closeSheet, field, button, signed } from './dom.js';
-import { partyList, openCharacterSheet } from './sheet.js';
+import { partyList, openCharacterSheet, readiness, money } from './sheet.js';
 import {
   createCharacter, pregeneratedParty, POINT_BUY_BUDGET, pointsSpent, pointCost,
   STANDARD_ARRAY, rollAbilities, reviveCharacter, skillBudget,
@@ -70,6 +70,8 @@ export function partyScreen(root, { onReady, app, title = '一行を決める' }
         ]))),
       ]) : el('p', { class: 'muted center tiny', text: 'まだ誰もいない。' }),
 
+      party.length ? prepCard(party, render) : null,
+
       el('button', {
         class: 'btn btn--primary btn--block',
         disabled: !party.length,
@@ -84,6 +86,46 @@ export function partyScreen(root, { onReady, app, title = '一行を決める' }
   };
 
   render();
+}
+
+/* 出発の支度。持ち越しが入って、稼いだ金で次の装備を買う往復が意味を
+   持つようになった——が、買い物はシートの奥にあって、開かなければ丸腰で
+   出かけようとしていることに気づけない。ここで数えて、外に出す。 */
+function prepCard(party, refresh) {
+  const purse = party.reduce((sum, pc) => sum + (pc.gold || 0), 0);
+  const rows = party.map(pc => {
+    const ready = readiness(pc);
+    return el('div', { class: 'stack', style: { gap: '3px', marginBottom: '10px' } }, [
+      el('div', { class: 'spread' }, [
+        el('span', { text: `${pc.portrait || '🎲'} ${pc.name}` }),
+        el('span', { class: 'row', style: { gap: '5px' } }, [
+          el('span', { class: 'tiny faint', text: money(ready.gold) }),
+          button('買い物', () => openCharacterSheet(pc, { canShop: true, onChange: refresh }), 'btn btn--sm'),
+        ]),
+      ]),
+      el('div', { class: 'tiny faint', text: [
+        ready.weapon ? ready.weapon.name : '武器なし',
+        ready.armor ? ready.armor.name : '防具なし',
+        `回復×${ready.heals}`,
+      ].join('／') }),
+      ready.warnings.length
+        ? el('div', { class: 'tiny', style: { color: 'var(--blood)' }, text: `▲ ${ready.warnings.join('、')}` })
+        : null,
+    ]);
+  });
+
+  const unready = party.filter(pc => readiness(pc).warnings.length).length;
+  return el('div', { class: 'card stack' }, [
+    el('div', { class: 'spread' }, [
+      el('h3', { class: 'card__title', text: '出発の支度' }),
+      el('span', { class: 'tiny faint', text: `一行の手持ち ${money(purse)}` }),
+    ]),
+    el('p', { class: 'tiny faint', text: '買い物は冒険の外でだけできます。持ち込めるのは、ここで持たせたものだけ。' }),
+    ...rows,
+    unready
+      ? el('p', { class: 'tiny', style: { color: 'var(--blood)' }, text: `${unready}人が手ぶらに近い状態です。このまま出ることもできます。` })
+      : el('p', { class: 'tiny', style: { color: 'var(--leaf)' }, text: '全員、武器と防具と回復の手段を持っています。' }),
+  ]);
 }
 
 const classOf = pc => CLASSES.find(c => c.id === pc.classId)?.name || pc.classId;

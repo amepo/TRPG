@@ -4,7 +4,7 @@ import { el, frag, hpBar, signed, openSheet, toast, button } from './dom.js';
 import { sheet as buildSheet } from '../core/character.js';
 import { ABILITIES, SKILLS, abilityName, CONDITIONS } from '../core/rules.js';
 import { conditionName } from '../core/combat.js';
-import { spellById, label } from '../core/content.js';
+import { spellById, label, classById } from '../core/content.js';
 import { catalogue as augmentCatalogue, summary as augmentSummary, install, remove, hasAugments } from '../core/augment.js';
 import { recalculate } from '../core/character.js';
 import {
@@ -288,7 +288,7 @@ function openSwap(character, slot, refresh) {
 }
 
 /* 店。世界が売っているものを並べる。持っているものには印をつける。 */
-function openStore(character, kind, refresh) {
+export function openStore(character, kind, refresh) {
   const titles = { weapons: '武器', armors: '防具', items: '道具' };
   const stock = gearCatalogue()[kind] || [];
   openSheet(`${titles[kind]}を買う（手持ち ${money(character.gold || 0)}）`,
@@ -340,4 +340,29 @@ const section = (title, body) => el('div', { style: { marginTop: '16px' } }, [
   body,
 ]);
 
-export { kv, section };
+/**
+ * 出発の支度がどこまでできているか。
+ *
+ * 持ち越しが入ったので、稼いだ金で次の装備を買う——という往復が意味を持つ
+ * ようになった。ただし買い物はシートの奥にあって、開かなければ「丸腰で
+ * 出かけようとしている」ことに気づけない。ここで数えて、外に出す。
+ * @returns {{gold:number, weapon:object|null, armor:object|null, heals:number, warnings:string[]}}
+ */
+export function readiness(character) {
+  const gear = character.equipped || {};
+  const inventory = character.inventory || [];
+  const heals = inventory
+    .filter(i => i.use === 'heal' && i.count > 0)
+    .reduce((sum, i) => sum + i.count, 0);
+
+  const warnings = [];
+  const weapon = gear.weapon || gear.ranged || null;
+  if (!weapon) warnings.push('武器を持っていない');
+  /* 防具は着られるクラスにだけ言う。秘術師は最初から着られないので、
+     直しようのない注意を出しても手が止まるだけだ。 */
+  if (!gear.armor && classById(character.classId)?.armor) warnings.push('防具を着ていない');
+  if (!heals) warnings.push('回復の手段がない');
+  return { gold: character.gold || 0, weapon, armor: gear.armor || null, heals, warnings };
+}
+
+export { kv, section, money };

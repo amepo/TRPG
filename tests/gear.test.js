@@ -5,6 +5,7 @@ import {
   catalogue, thingById, slotFor, buy, sell, equip, unequip, owns, loadout, SLOTS, RESALE,
 } from '../js/core/gear.js';
 import { createCharacter, recalculate, attackOptions } from '../js/core/character.js';
+import { readiness } from '../js/ui/sheet.js';
 import { armorClass, carriedSaveAdvantage, savingThrow } from '../js/core/rules.js';
 import { Rng } from '../js/core/rng.js';
 import { useWorld, DEFAULT_WORLD, WORLDS } from '../js/worlds/index.js';
@@ -200,4 +201,39 @@ test('手放せない品は売れない', () => {
   assert.equal(result.ok, false, '物語のための品が売れてしまう');
   assert.equal(pc.gold, 0);
   assert.equal(pc.inventory.length, 1);
+});
+
+/* ------------------------------------------------ 出発の支度 */
+
+/* 持ち越しが入って、稼いだ金で次の装備を買う往復が意味を持つようになった。
+   買い物はシートの奥にあるので、開かなくても足りないものが分かるようにする。 */
+test('支度の点検は、足りないものを名指しする', () => {
+  useWorld('embers');
+  const fighter = createCharacter({ name: '戦', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier' });
+  assert.deepEqual(readiness(fighter).warnings, [], `最初から揃っているはず: ${readiness(fighter).warnings}`);
+
+  // 武器も防具も外し、回復も捨てる。
+  const bare = createCharacter({ name: '裸', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier' });
+  bare.equipped = {};
+  bare.inventory = [];
+  const warned = readiness(bare).warnings;
+  assert.ok(warned.some(w => w.includes('武器')), warned.join('／'));
+  assert.ok(warned.some(w => w.includes('防具')), warned.join('／'));
+  assert.ok(warned.some(w => w.includes('回復')), warned.join('／'));
+});
+
+/* 直しようのない注意は出さない。秘術師はそもそも防具を着られない。 */
+test('防具を着られないクラスに、防具の注意は出ない', () => {
+  useWorld('embers');
+  const mage = createCharacter({ name: '術', classId: 'mage', ancestryId: 'human', backgroundId: 'sage' });
+  assert.equal(readiness(mage).warnings.some(w => w.includes('防具')), false);
+});
+
+test('回復の数は、持っている数だけ数える', () => {
+  useWorld('embers');
+  const pc = createCharacter({ name: '薬', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier' });
+  const before = readiness(pc).heals;
+  pc.gold = 9999;
+  buy(pc, 'potion', 3);
+  assert.equal(readiness(pc).heals, before + 3);
 });

@@ -846,6 +846,38 @@ try {
     if (/出していません|まだありません/.test(sheet)) throw new Error('保存した一行が一覧に出ない');
   });
 
+  /* 出発の支度。買った装備を持って冒険に臨む、という往復が見えるか。 */
+  await step('出発前に支度が見えて、買った武器がその場に反映される', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.getByRole('button', { name: /はじめての依頼/ }).first().click();
+    await click('おまかせ4人');
+
+    const prep = page.locator('.card').filter({ hasText: '出発の支度' });
+    if (!await prep.count()) throw new Error('支度の欄が出ていない');
+    const before = await prep.innerText();
+    if (!/一行の手持ち/.test(before)) throw new Error('一行の手持ちが出ていない');
+    if (!/回復×/.test(before)) throw new Error('回復の数が出ていない');
+
+    // その場で買う。買ったものが支度の一覧に出る。
+    await prep.getByRole('button', { name: '買い物' }).first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    await page.locator('dialog[open]').getByRole('button', { name: '道具' }).click();
+    await page.waitForTimeout(200);
+    const stock = page.locator('dialog[open] .tile, dialog[open] button').filter({ hasText: '回復' });
+    if (await stock.count()) {
+      await stock.first().click();
+      await page.waitForTimeout(250);
+    }
+    await page.locator('#sheetClose').click();
+    await page.waitForTimeout(250);
+
+    // 冒険の中では買えない。
+    await click('この一行で始める');
+    await page.locator('.log__line').first().waitFor();
+    if (await page.getByText('出発の支度').count()) throw new Error('冒険中に支度の欄が出ている');
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });
