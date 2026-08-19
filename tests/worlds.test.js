@@ -569,6 +569,29 @@ test('ネオンでは全員が登録された姓を持つ', () => {
   assert.ok(names.every(n => n.includes('・')), '姓を持たない者がいる');
 });
 
+/* 「竜ってメジャーな存在？」から。「この地方に竜は出ない」と書いた以上、
+   敵の一覧に竜がいてはいけない。恐ろしいものの語彙が不死で出来ていることも、
+   数のうえで本当でなければ、読み物のほうが嘘になる。 */
+test('灯火の地方に竜は出ず、恐怖の語彙は不死で出来ている', () => {
+  useWorld('embers');
+  const monsters = Object.values(worldById('embers').monsters);
+
+  assert.equal(monsters.some(m => m.kind === '竜' || /竜/.test(m.name)), false,
+    '「竜は出ない」と書いてあるのに敵の一覧にいる');
+
+  const undead = monsters.filter(m => m.kind === '不死');
+  assert.ok(undead.length >= 3, `不死が ${undead.length} 体しかいない`);
+
+  const truth = LORE.truths.find(t => t.title.includes('竜'));
+  assert.ok(truth, '竜の決まりごとが読み物に無い');
+  for (const word of ['熊', '不死', '学院']) {
+    assert.ok(truth.text.includes(word), `竜の決まりごとに「${word}」が出てこない`);
+  }
+  // 竜血は歩いている。出自を証明できないだけ。
+  assert.ok(worldById('embers').ancestries.some(a => a.id === 'dragonborn'));
+  assert.ok(truth.text.includes('竜血'), '竜血との噛み合わせが書かれていない');
+});
+
 test('読み物を持たない世界でも空の器が返る', () => {
   const bare = { id: 'bare', name: '素', abilities: [], skills: [], ancestries: {}, classes: {}, backgrounds: {}, weapons: {}, armors: {}, items: {}, spells: {}, classSpells: {}, monsters: {} };
   register(bare);
