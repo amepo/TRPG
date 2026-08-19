@@ -11,6 +11,7 @@ import {
   shortRest, longRest, skillMod, skillName, levelForXp, abilityName,
 } from './rules.js';
 import { Combat, spawnGroup } from './combat.js';
+import { traitOnRest } from './traits.js';
 import { Netrun } from './netrun.js';
 import { useWorld, DEFAULT_WORLD } from '../worlds/index.js';
 import { recalculate, awardXp, levelUp, reviveCharacter } from './character.js';
@@ -449,9 +450,22 @@ export class Session extends EventTarget {
 
   /** A breather or a full night. Both are also offered from the UI. */
   rest(kind = 'short') {
+    /* 休むときに取り立てられる代償がある。強い品ほど、静かなときに請求が来る。 */
+    const tollAll = () => {
+      for (const pc of this.party) {
+        if (pc.dead) continue;
+        for (const event of traitOnRest({ self: pc, kind })) {
+          if (event.gold) pc.gold = Math.max(0, (pc.gold || 0) - event.gold);
+          if (event.damage) applyDamage(pc, event.damage, event.type || '無属性');
+          if (event.text) this.say(event.text, 'bad');
+        }
+      }
+    };
+
     if (kind === 'long') {
       for (const pc of this.party) { longRest(pc); pc.luckUsed = false; recalculate(pc); }
       this.say('一行は夜を明かした。傷は塞がり、呪文も戻っている。', 'system');
+      tollAll();
     } else {
       for (const pc of this.party) {
         if (pc.dead) continue;
@@ -463,6 +477,7 @@ export class Session extends EventTarget {
         if (result.healed) this.say(`${pc.name} は手当てで ${result.healed} 回復（${pc.hp}/${pc.maxHp}）`, 'good');
       }
       this.say('短い休憩をとった。', 'system');
+      tollAll();
     }
     this.emit('change');
     return this.view();

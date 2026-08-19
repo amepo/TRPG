@@ -29,9 +29,21 @@ export function normalizeTrait(trait) {
   return { id: trait.id || null, text: trait.text || def?.name || '', def };
 }
 
-/** 生き物が持つ特性の一覧。id の付いていないものも表示のために残す。 */
+/**
+ * 生き物が持つ特性の一覧。id の付いていないものも表示のために残す。
+ *
+ * 身につけているものが持つ特性も、本人の特性と同じ列に並べる。これで
+ * 「炎の首飾りは攻撃に火を足し、そのぶん火に弱くなる」を、新しい仕組みを
+ * 足さずに書ける——力にも代償にも、すでにあるフックがそのまま効く。
+ * 鞄の中で効くものは alwaysOn を立てる（護符のように持っているだけの品）。
+ */
 export function traitList(entity) {
-  return (entity?.traits || []).map(normalizeTrait).filter(Boolean);
+  const own = entity?.traits || [];
+  const worn = Object.values(entity?.equipped || {}).flatMap(item => item?.traits || []);
+  const held = (entity?.inventory || [])
+    .filter(item => item.alwaysOn && item.count > 0)
+    .flatMap(item => item.traits || []);
+  return [...own, ...worn, ...held].map(normalizeTrait).filter(Boolean);
 }
 
 export const hasTrait = (entity, id) => traitList(entity).some(t => t.id === id);
@@ -44,10 +56,15 @@ export const isFlavor = trait => normalizeTrait(trait)?.def?.kind === 'flavor';
 
 /* ------------------------------------------------------------ 受動効果 */
 
+/* 力の側と、代償の側。代償は「効かないと嘘になる」ので、有利と同じだけ
+   きちんと数える——不利・脆弱・移動低下・最大HPの目減り。 */
 const EMPTY_PASSIVES = () => ({
-  hpPerLevel: 0, initiativeBonus: 0, extraSkills: 0, gold: 0,
+  hpPerLevel: 0, initiativeBonus: 0, extraSkills: 0, gold: 0, acBonus: 0,
+  maxHpPenalty: 0, speedPenalty: 0,
   grantSkills: [], resistances: [], immunities: [], conditionImmunities: [],
+  vulnerabilities: [],
   saveAdvantageVs: [], skillAdvantage: [],
+  saveDisadvantageVs: [], skillDisadvantage: [],
 });
 
 /** 受動特性を、ルール層が読む平の数値と配列にまとめる。 */
@@ -60,8 +77,12 @@ export function traitPassives(entity) {
     out.initiativeBonus += p.initiativeBonus || 0;
     out.extraSkills += p.extraSkills || 0;
     out.gold += p.gold || 0;
+    out.acBonus += p.acBonus || 0;
+    out.maxHpPenalty += p.maxHpPenalty || 0;
+    out.speedPenalty += p.speedPenalty || 0;
     for (const key of ['grantSkills', 'resistances', 'immunities', 'conditionImmunities',
-      'saveAdvantageVs', 'skillAdvantage']) {
+      'vulnerabilities', 'saveAdvantageVs', 'skillAdvantage',
+      'saveDisadvantageVs', 'skillDisadvantage']) {
       if (p[key]) out[key] = [...new Set([...out[key], ...p[key]])];
     }
   }
@@ -101,6 +122,35 @@ export function traitAbsorb(ctx) {
     if (r.note) notes.push(r.note);
   }
   return { amount, notes };
+}
+
+/**
+ * 命中したときに上乗せするダメージ。強い品はここで効き、代償は別のフックで
+ * 取り立てる。返すのは式（'1d6'）と種別。
+ * @param {object} ctx {self, target, attack, combat}
+ * @returns {{dice:string, type:string, note:string}[]}
+ */
+export function traitBonusDamage(ctx) {
+  const out = [];
+  for (const t of withHook(ctx.self, 'bonusDamage')) {
+    const r = t.def.bonusDamage({ ...ctx, trait: t });
+    if (r?.dice) out.push({ dice: r.dice, type: r.type || '物理', note: r.note || t.text });
+  }
+  return out;
+}
+
+/**
+ * 休むときに動く特性。代償を取り立てる場所。
+ * @param {object} ctx {self, kind:'short'|'long'}
+ * @returns {{text:string}[]}
+ */
+export function traitOnRest(ctx) {
+  const events = [];
+  for (const t of withHook(ctx.self, 'rest')) {
+    const r = t.def.rest({ ...ctx, trait: t });
+    if (r) events.push(r);
+  }
+  return events;
 }
 
 /**
@@ -311,6 +361,97 @@ export const TRAITS = {
       damage: '2d6', type: '火', save: 'dex', area: true,
       text: '{name}は息を吸い込み、細く長く吐き出した。',
     },
+  },
+
+  /* -------------------------------------------------- 秘蔵の品（力と代償） */
+
+  /* ここに並ぶものは、必ず二つ書く。何ができるようになるかと、何を失うか。
+     「単純に強い」品は置かない——置いた瞬間、他の選択肢が全部無意味になる。
+     代償はどれも実際に効く。効かない代償は代償ではなく、ただの飾りになる。 */
+
+  emberFang: {
+    name: '燠の牙', kind: 'combat',
+    // 力：命中するたびに炎が乗る。
+    bonusDamage: () => ({ dice: '1d6', type: '火', note: '燠の牙' }),
+    // 代償：自分も火が通るようになる。竜血の火耐性さえ打ち消す。
+    passive: { vulnerabilities: ['火'] },
+  },
+
+  cursedCoin: {
+    name: '数える金貨', kind: 'combat',
+    // 力：出目1を振り直せる（幸運と同じ土台）。
+    passive: {},
+    rerollNatural1: true,
+    /* 代償：休むたびに金が減る。金貨が仲間を呼ぶ、と言われている。
+       手放せないので（keep）、抜け道は「使い切って貧しくなる」しかない。 */
+    rest: ({ self }) => {
+      const toll = Math.min(self.gold || 0, 10 + (self.level || 1) * 5);
+      if (!toll) return null;
+      return { gold: toll, text: `${self.name}の袋から ${toll} 消えている。数える金貨は、数えた分だけ持っていく。` };
+    },
+  },
+
+  whisperCrown: {
+    name: '囁きの環', kind: 'passive',
+    /* 力：見えないものが見える（知覚と看破に有利）。
+       代償：声が混じるので、意志のセーヴに不利。 */
+    passive: {
+      skillAdvantage: ['perception', 'insight'],
+      saveDisadvantageVs: ['charmed', 'frightened'],
+    },
+  },
+
+  ironVow: {
+    name: '鉄の誓い', kind: 'passive',
+    /* 力：AC +2。誓いが身を守る。
+       代償：移動が半分近くまで落ち、隠密が使えなくなる。 */
+    passive: { acBonus: 2, speedPenalty: 4.5, skillDisadvantage: ['stealth', 'acrobatics'] },
+  },
+
+  bloodedge: {
+    name: '血の刃', kind: 'combat',
+    // 力：斬るたびに深く入る。
+    bonusDamage: () => ({ dice: '1d8', type: '斬撃', note: '血の刃' }),
+    // 代償：刃が持ち主からも飲む。最大HPが目減りしたまま戻らない。
+    passive: { maxHpPenalty: 5 },
+  },
+
+  /* サイバーパンク側。呼び名も理屈も違うが、力と代償の作りは同じ。 */
+
+  overdrive: {
+    name: '過駆動チップ', kind: 'combat',
+    bonusDamage: () => ({ dice: '1d6', type: '電撃', note: '過駆動' }),
+    passive: { vulnerabilities: ['電撃'] },
+  },
+
+  blackLedger: {
+    name: '黒台帳', kind: 'combat',
+    passive: {},
+    rerollNatural1: true,
+    rest: ({ self }) => {
+      const toll = Math.min(self.gold || 0, 40 + (self.level || 1) * 20);
+      if (!toll) return null;
+      return { gold: toll, text: `${self.name}の口座から €$${toll} 引かれている。黒台帳は、使った分を後から請求する。` };
+    },
+  },
+
+  ghostLens: {
+    name: '幽霊レンズ', kind: 'passive',
+    passive: {
+      skillAdvantage: ['perception', 'streetwise'],
+      saveDisadvantageVs: ['charmed', 'frightened'],
+    },
+  },
+
+  bulwarkRig: {
+    name: '固定装甲', kind: 'passive',
+    passive: { acBonus: 2, speedPenalty: 4.5, skillDisadvantage: ['stealth', 'acrobatics'] },
+  },
+
+  redlineBlade: {
+    name: 'レッドライン', kind: 'combat',
+    bonusDamage: () => ({ dice: '1d8', type: '斬撃', note: 'レッドライン' }),
+    passive: { maxHpPenalty: 5 },
   },
 
   /* ------------------------------------------------------------ 描写のみ */

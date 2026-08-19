@@ -316,6 +316,47 @@ const ITEMS = {
   rations: { id: 'rations', cost: 15, name: '合成食（3日分）', desc: '路上生活に使う。' },
   deck: { id: 'deck', cost: 1500, name: 'サイバーデッキ', desc: 'ネットランに必要な端末。' },
   medkit: { id: 'medkit', cost: 250, name: '医療キット', desc: '【応急処置】判定に必要。' },
+
+  /* ------------------------------------------------------- 試作品（灰色市場） */
+
+  /* 灯火の「秘蔵の品」と同じ作り。力を貸すものは必ず何かを持っていく。
+     こちらは魔法ではなく、認可の下りていない試作品という顔をしている。
+     値段は「下層のひと月（€$400）」を物差しに。 */
+
+  overdrive: {
+    id: 'overdrive', cost: 3200, name: '過駆動チップ', magic: true,
+    damage: '1d8', type: '斬撃', ability: 'dex',
+    desc: '神経に直結する試作の刃。命中に 1d6 の電撃が乗る。'
+      + '代わりに配線が剥き出しになり、電撃が体に通るようになる（電撃ダメージ2倍）。',
+    traits: [{ id: 'overdrive', text: '過駆動：命中に+1d6の電撃／自分は電撃に脆弱' }],
+  },
+  blackLedger: {
+    id: 'blackLedger', cost: 2400, name: '黒台帳', magic: true, keep: true, alwaysOn: true,
+    desc: '誰の口座でもない口座。持っているあいだ、出目1を振り直せる。'
+      + 'ただし休むたびに残高が引かれ、そして解約できない。',
+    traits: [{ id: 'blackLedger', text: '黒台帳：出目1を振り直せる／休むたびに口座が減る・解約できない' }],
+  },
+  ghostLens: {
+    id: 'ghostLens', cost: 2800, name: '幽霊レンズ', magic: true,
+    base: 10, maxDex: undefined,
+    desc: '死者の視野記録を流し込む義眼。知覚と街の勘に有利。'
+      + '代わりに他人の記憶が混ざるので、魅了と恐怖のセーヴに不利。',
+    traits: [{ id: 'ghostLens', text: '幽霊レンズ：知覚と街の勘に有利／魅了と恐怖のセーヴに不利' }],
+  },
+  bulwarkRig: {
+    id: 'bulwarkRig', cost: 4000, name: '固定装甲', magic: true,
+    base: 14, maxDex: 1,
+    desc: '据え置き用の装甲を無理に着るもの。AC が2上がる。'
+      + '代わりに動きが死ぬ（移動 −4.5m、隠密と軽業に不利）。',
+    traits: [{ id: 'bulwarkRig', text: '固定装甲：AC +2／移動 −4.5m・隠密と軽業に不利' }],
+  },
+  redlineBlade: {
+    id: 'redlineBlade', cost: 4500, name: 'レッドライン', magic: true, keep: true,
+    damage: '1d8', type: '斬撃', ability: 'dex',
+    desc: '使用者の代謝を燃料にするモノブレード。命中に 1d8 が上乗せされる。'
+      + '燃やしているのは本人なので、最大HPが5減ったまま戻らない。外せない。',
+    traits: [{ id: 'redlineBlade', text: 'レッドライン：命中に+1d8／最大HP −5・外せない' }],
+  },
 };
 
 /* --------------------------------------------------------- サイバーウェア */
@@ -1090,6 +1131,7 @@ export const neon = {
     gold: '残高',
     goldUnit: '€$',
     hitDice: '回復リソース',
+    relics: '試作品',
     strain: '適合度',
   },
 

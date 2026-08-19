@@ -144,8 +144,11 @@ function rerollOnes(actor, result, { rng, mode, extras } = {}) {
  */
 export function check(actor, skillId, dc, opts = {}) {
   const { rng, advantage = false, disadvantage = false, bonus = 0 } = opts;
-  const adv = advantage || traitPassives(actor).skillAdvantage.includes(skillId);
-  const dis = disadvantage || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
+  const passives = traitPassives(actor);
+  const adv = advantage || passives.skillAdvantage.includes(skillId);
+  // 代償の側も同じだけ数える。有利だけ効いて不利が効かないなら、代償ではない。
+  const dis = disadvantage || passives.skillDisadvantage.includes(skillId)
+    || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
   const mode = resolveMode({ advantage: adv, disadvantage: dis });
 
   let mod = skillMod(actor, skillId) + bonus;
@@ -190,11 +193,13 @@ export function savingThrow(actor, ability, dc, opts = {}) {
   // `vs` names what the save is against (毒、魅了…) so a trait can grant an
   // edge against that specific thing rather than against every save.
   // 有利の出どころは特性と装備の両方。作成時に畳んだ値があればそれを使う。
+  const passives = traitPassives(actor);
   const adv = advantage || (vs && (
-    actor.saveAdvantageVs?.includes(vs) || traitPassives(actor).saveAdvantageVs.includes(vs)
+    actor.saveAdvantageVs?.includes(vs) || passives.saveAdvantageVs.includes(vs)
     || carriedSaveAdvantage(actor).includes(vs)
   ));
-  const dis = disadvantage || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
+  const dis = disadvantage || (vs && passives.saveDisadvantageVs.includes(vs))
+    || SELF_DISADVANTAGE.some(id => hasCondition(actor, id));
   const mode = resolveMode({ advantage: adv, disadvantage: dis });
   let mod = saveMod(actor, ability) + bonus;
   if (hasCondition(actor, 'blessed')) mod += roll('1d4', { rng }).total;

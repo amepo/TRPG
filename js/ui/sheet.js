@@ -163,6 +163,9 @@ export function characterSheet(character, { onChange, canShop = false } = {}) {
         }, [`売る ${money(Math.floor(i.cost * RESALE))}`]) : null,
         i.keep ? el('span', { class: 'tiny faint', text: '手放せない' }) : null,
       ]),
+      ...traitList(i).map(t => el('div', {
+        class: 'tiny', style: { color: 'var(--gold)', paddingBottom: '4px' }, text: `　${t.text}`,
+      })),
     ]))
     : [el('p', { class: 'muted tiny', text: '何も持っていない。' })]);
 
@@ -174,6 +177,9 @@ export function characterSheet(character, { onChange, canShop = false } = {}) {
         button('防具', () => openStore(character, 'armors', refresh), 'btn btn--sm grow'),
         button('道具', () => openStore(character, 'items', refresh), 'btn btn--sm grow'),
       ]),
+      gearCatalogue().relics?.length
+        ? button(`${label('relics', '秘蔵の品')}を見る`, () => openStore(character, 'relics', refresh), 'btn btn--sm btn--block')
+        : null,
     ])
     : null;
 
@@ -289,7 +295,7 @@ function openSwap(character, slot, refresh) {
 
 /* 店。世界が売っているものを並べる。持っているものには印をつける。 */
 export function openStore(character, kind, refresh) {
-  const titles = { weapons: '武器', armors: '防具', items: '道具' };
+  const titles = { weapons: '武器', armors: '防具', items: '道具', relics: label('relics', '秘蔵の品') };
   const stock = gearCatalogue()[kind] || [];
   openSheet(`${titles[kind]}を買う（手持ち ${money(character.gold || 0)}）`,
     el('div', { class: 'stack' }, stock.map(thing => {
@@ -309,6 +315,12 @@ export function openStore(character, kind, refresh) {
           el('span', { class: 'tiny faint grow', style: { textAlign: 'right' }, text: money(thing.cost) }),
         ]),
         el('div', { class: 'tile__desc', text: describeThing(thing) }),
+        /* 力と代償は、買う前に見えていないと意味がない。買ってから
+           「移動が落ちる」と分かるのでは、選んだことにならない。 */
+        ...traitList(thing).map(t => el('div', {
+          class: 'tiny', style: { marginTop: '4px', color: 'var(--gold)' }, text: t.text,
+        })),
+        thing.keep ? el('div', { class: 'tiny', style: { color: 'var(--blood)' }, text: '※ 一度手にすると、手放せません' }) : null,
       ]);
     })));
 }

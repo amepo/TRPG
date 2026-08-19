@@ -14,6 +14,7 @@
 import {
   WEAPONS, ARMORS, SHIELD, ITEMS, weaponById, armorById, itemById,
 } from './content.js';
+import { recalculate } from './character.js';
 
 /** 売るときは半値。買い戻せない差額が、この街（とこの地方）の取り分。 */
 export const RESALE = 0.5;
@@ -33,10 +34,13 @@ export const SLOTS = [
  */
 export function catalogue() {
   const buyable = thing => thing && thing.cost !== undefined && thing.cost > 0;
+  const plain = thing => buyable(thing) && !thing.magic;
   return {
-    weapons: Object.values(WEAPONS).filter(buyable),
-    armors: [...Object.values(ARMORS), SHIELD].filter(buyable),
-    items: Object.values(ITEMS).filter(buyable),
+    weapons: Object.values(WEAPONS).filter(plain),
+    armors: [...Object.values(ARMORS), SHIELD].filter(plain),
+    items: Object.values(ITEMS).filter(plain),
+    /* 力と代償を持つ品は、棚を分ける。値段も桁が違うし、間違って買うものでもない。 */
+    relics: Object.values(ITEMS).filter(thing => buyable(thing) && thing.magic),
   };
 }
 
@@ -70,6 +74,8 @@ export function buy(character, id, count = 1) {
   }
   character.gold -= price;
   addToBag(character, thing, count);
+  // 鞄の中で効く品（alwaysOn）があるので、買った時点で組み直す。
+  recalculate(character);
   return { ok: true, paid: price, item: thing };
 }
 
@@ -88,6 +94,7 @@ export function sell(character, id, count = 1) {
   entry.count -= sold;
   if (entry.count <= 0) character.inventory = character.inventory.filter(i => i.id !== id);
   character.gold = (character.gold || 0) + got;
+  recalculate(character);
   return { ok: true, got, count: sold };
 }
 
@@ -110,6 +117,9 @@ export function equip(character, id) {
 
   takeFromBag(character, id, 1);
   character.equipped[slot] = { ...thing };
+  /* 持ち替えたら組み直す。品が特性を持つようになったので、ここを飛ばすと
+     「AC +2」と書いてある鎧を着ても AC が動かない——書いてあるのに効かない。 */
+  recalculate(character);
   return { ok: true, slot, replaced };
 }
 
@@ -117,8 +127,11 @@ export function equip(character, id) {
 export function unequip(character, slot) {
   const thing = character.equipped?.[slot];
   if (!thing) return { ok: false, reason: '何もつけていません' };
+  // 外せない品は外せない。呪いはそこが呪いたるところ。
+  if (thing.keep) return { ok: false, reason: 'これは外せません' };
   delete character.equipped[slot];
   addToBag(character, thing, 1);
+  recalculate(character);
   return { ok: true, item: thing };
 }
 

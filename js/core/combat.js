@@ -15,7 +15,7 @@ import {
 } from './rules.js';
 import { monsterById, sneakAttackDice, spellById, SPELLS } from './content.js';
 import {
-  traitAttackMods, traitAbsorb, traitSurvive, traitTurnStart, traitActions, auraFrom,
+  traitAttackMods, traitAbsorb, traitBonusDamage, traitSurvive, traitTurnStart, traitActions, auraFrom,
 } from './traits.js';
 import { attackOptions, spellOptions, useSlot, removeItem } from './character.js';
 
@@ -316,6 +316,16 @@ export class Combat {
     const applied = applyDamage(target, total, dmg.type, { pierce: traitMods.pierce });
     this.say(`→ ${target.name}に ${damageText(applied)}${notes.length ? `（${notes.join('・')}）` : ''}｜残りHP ${target.hp}/${target.maxHp}`,
       actor.side === 'party' ? 'good' : 'bad');
+
+    /* 品が上乗せするダメージ。種別が違うので、まとめずに別で通す——
+       炎の追加ダメージが「打撃」として抵抗されたら、書いてあることが嘘になる。 */
+    for (const bonus of traitBonusDamage({ self: actor, target, attack, combat: this })) {
+      if (target.hp <= 0) break;
+      const extra = roll(result.crit ? `${bonus.dice}+${bonus.dice}` : bonus.dice, { rng: this.rng });
+      const burn = applyDamage(target, extra.total, bonus.type);
+      this.say(`　＋${bonus.note}：${damageText(burn)}｜残りHP ${target.hp}/${target.maxHp}`,
+        actor.side === 'party' ? 'good' : 'bad');
+    }
 
     // Riders (knocked prone, poisoned…) mean nothing to someone already down.
     if (attack.onHit && applied.dealt > 0 && target.hp > 0) this.applyRider(actor, target, attack.onHit);

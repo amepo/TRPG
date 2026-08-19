@@ -878,6 +878,36 @@ try {
     if (await page.getByText('出発の支度').count()) throw new Error('冒険中に支度の欄が出ている');
   });
 
+  /* 秘蔵の品。力と代償が買う前に見えていて、装備すると実際に数字が動くか。 */
+  await step('秘蔵の品は、力と代償を並べて売っている', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('ソロプレイ');
+    await page.getByRole('button', { name: /はじめての依頼/ }).first().click();
+    await click('おまかせ4人');
+
+    await page.locator('.pc').first().click();
+    await page.waitForSelector('dialog[open] .stats');
+    await page.locator('dialog[open]').getByRole('button', { name: /秘蔵の品/ }).click();
+    await page.waitForTimeout(250);
+
+    const shelf = await page.locator('dialog[open]').innerText();
+    if (!/燠の牙|鉄の誓い/.test(shelf)) throw new Error('秘蔵の品が並んでいない');
+    if (!/／/.test(shelf)) throw new Error('力と代償が書き分けられていない');
+    if (!/手放せません/.test(shelf)) throw new Error('呪いの警告が出ていない');
+  });
+
+  await step('秘蔵の品は、駆け出しの手持ちでは買えない', async () => {
+    // 一年の暮らしより高い。稼いで戻ってくるものであって、最初から持つものではない。
+    const shelf = page.locator('dialog[open] .tile');
+    const total = await shelf.count();
+    let locked = 0;
+    for (let i = 0; i < total; i++) {
+      if (await shelf.nth(i).isDisabled()) locked += 1;
+    }
+    if (locked !== total) throw new Error(`${total}件中${locked}件しか止まっていない`);
+    await page.locator('#sheetClose').click();
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });

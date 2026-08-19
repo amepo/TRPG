@@ -148,17 +148,27 @@ export function recalculate(character) {
     + (character.level - 1) * (perLevel + conMod)
     + (ancestry.hpPerLevel || 0) * character.level
     + (traits.hpPerLevel || 0) * character.level
-    + (character.augmentHpPerLevel || 0) * character.level;
+    + (character.augmentHpPerLevel || 0) * character.level
+    // 代償で目減りするぶん。強い品ほど、体を削っていることがある。
+    - (traits.maxHpPenalty || 0);
   character.maxHp = Math.max(1, character.maxHp);
   if (character.hp === undefined) character.hp = character.maxHp;
   character.hp = Math.min(character.hp, character.maxHp);
 
   // 脚の改造は移動そのものを変える。素の値は種族が持っている。
-  character.speed = (ancestry.speed || 9) + (character.augmentSpeed || 0);
+  character.speed = Math.max(1.5,
+    (ancestry.speed || 9) + (character.augmentSpeed || 0) - (traits.speedPenalty || 0));
   // セーヴの有利は、特性と改造の両方から来る。
   character.saveAdvantageVs = [...new Set([
     ...traits.saveAdvantageVs, ...(character.augmentSaveAdvantageVs || []),
   ])];
+  /* 抵抗と脆弱。applyAugments が積んだものの上に重ねる（上書きしない——
+     改造の抵抗が消える）。炎の力を借りると、そのぶん火が通るようになるので、
+     同じ種別に両方が立ったときは脆弱を勝たせる。 */
+  character.vulnerabilities = [...new Set(traits.vulnerabilities)];
+  character.resistances = (character.resistances || [])
+    .filter(type => !character.vulnerabilities.includes(type));
+  character.acBonus = (character.acBonus || 0) + (traits.acBonus || 0);
 
   character.proficiency = proficiencyBonus(character.level);
   character.ac = armorClass(character);

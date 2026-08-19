@@ -29,7 +29,9 @@ const collect = (world, group, owner, entity) => {
 };
 
 for (const world of Object.values(WORLDS)) {
-  for (const [group, label] of [['ancestries', '種族/出自'], ['monsters', '敵']]) {
+  /* items も見る。品が特性を持てるようにした日、ここを足し忘れて「どの世界からも
+     参照されていない定義」に10件並んだ——道具の穴は、穴のあるところに溜まる。 */
+  for (const [group, label] of [['ancestries', '種族/出自'], ['monsters', '敵'], ['items', '持ち物']]) {
     for (const entity of Object.values(world[group] || {})) collect(world.id, label, entity.name, entity);
   }
 }
@@ -38,6 +40,9 @@ for (const world of Object.values(WORLDS)) {
 for (const scenario of BUILT_IN) {
   for (const [id, monster] of Object.entries(scenario.monsters || {})) {
     collect(scenario.world || 'embers', `敵（${scenario.title}）`, monster.name || id, monster);
+  }
+  for (const [id, item] of Object.entries(scenario.items || {})) {
+    collect(scenario.world || 'embers', `持ち物（${scenario.title}）`, item.name || id, item);
   }
 }
 

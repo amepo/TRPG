@@ -305,6 +305,50 @@ const ITEMS = {
   rations: { id: 'rations', cost: 3, name: '携行食（3日分）', desc: '野営に使う。' },
   holySymbol: { id: 'holySymbol', cost: 5, name: '聖印', desc: '神聖呪文の焦点具。' },
   spellbook: { id: 'spellbook', cost: 25, name: '呪文書', desc: '秘術呪文の焦点具。' },
+
+  /* ------------------------------------------------------------ 秘蔵の品 */
+
+  /* 力を貸すものは、必ず何かを持っていく。単純に強い品は置かない——
+     置いた瞬間、他の武器も他の判断も意味を失う。
+     代償はすべて実装されていて、実際に効く（tests/magic.test.js で縛る）。
+
+     値段は「一年の暮らし（400枚）」を物差しにしてある。秘蔵の品は
+     それを超える——つまり普通の人間は一生かけても買えない。 */
+
+  emberFang: {
+    id: 'emberFang', cost: 700, name: '燠の牙', magic: true,
+    damage: '1d8', type: '刺突', ability: 'str',
+    desc: '竜の牙を柄に据えた短槍。命中するたびに 1d6 の火が乗る。'
+      + '代わりに、持ち主の側にも火が通るようになる（火ダメージ2倍）。',
+    traits: [{ id: 'emberFang', text: '燠の牙：命中に+1d6の火／自分は火に脆弱' }],
+  },
+  cursedCoin: {
+    id: 'cursedCoin', cost: 450, name: '数える金貨', magic: true, keep: true, alwaysOn: true,
+    desc: 'いわく付きの一枚。持っているあいだ、出目1を振り直せる。'
+      + 'ただし休むたびに袋から金が消える。そして手放せない。',
+    traits: [{ id: 'cursedCoin', text: '数える金貨：出目1を振り直せる／休むたびに所持金が減る・手放せない' }],
+  },
+  whisperCrown: {
+    id: 'whisperCrown', cost: 600, name: '囁きの環', magic: true,
+    base: 10, maxDex: undefined,
+    desc: '細い銀の環。見えないものが見え、聞こえないものが聞こえる（知覚と看破に有利）。'
+      + '代わりに、その声は persuasion のように働きかけてくる（魅了と恐怖のセーヴに不利）。',
+    traits: [{ id: 'whisperCrown', text: '囁きの環：知覚と看破に有利／魅了と恐怖のセーヴに不利' }],
+  },
+  ironVow: {
+    id: 'ironVow', cost: 800, name: '鉄の誓い', magic: true,
+    base: 14, maxDex: 1,
+    desc: '誓いを刻んだ重甲。AC が2上がる。'
+      + '代わりに歩みが遅くなり（移動 −4.5m）、隠密と軽業に不利がつく。',
+    traits: [{ id: 'ironVow', text: '鉄の誓い：AC +2／移動 −4.5m・隠密と軽業に不利' }],
+  },
+  bloodedge: {
+    id: 'bloodedge', cost: 900, name: '血の刃', magic: true, keep: true,
+    damage: '1d8', type: '斬撃', ability: 'str',
+    desc: '柄まで赤い長剣。命中に 1d8 が上乗せされる。'
+      + '刃は持ち主からも飲むので、最大HPが5減ったまま戻らない。手放せない。',
+    traits: [{ id: 'bloodedge', text: '血の刃：命中に+1d8／最大HP −5・手放せない' }],
+  },
 };
 
 /* ---------------------------------------------------------------- spells */
@@ -872,6 +916,7 @@ export const fantasy = {
     gold: '所持金',
     goldUnit: '枚',
     hitDice: 'ヒットダイス',
+    relics: '秘蔵の品',
     strain: null,          // この世界に改造はない
   },
 
