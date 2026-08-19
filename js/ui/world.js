@@ -111,6 +111,7 @@ const ancestriesCard = () => (ANCESTRIES.length ? el('div', { class: 'card stack
       a.life ? el('span', { class: 'tiny faint', text: lifeText(a.life) }) : null,
     ]),
     body(a.blurb || ''),
+    a.look ? body(`見た目：${a.look}`, 'tiny muted') : null,
     a.life?.note ? body(a.life.note, 'tiny faint') : null,
   ])),
 ]) : null);

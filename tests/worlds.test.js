@@ -569,6 +569,38 @@ test('ネオンでは全員が登録された姓を持つ', () => {
   assert.ok(names.every(n => n.includes('・')), '姓を持たない者がいる');
 });
 
+/* 「竜血と魔筋の見た目は人間と同じ？」から。特性として実装したものは、
+   見た目のほうにも出ていなければ嘘になる——竜鱗があるなら鱗は見えるし、
+   暗がりで見える目は、灯りを向けたときに光る。 */
+test('種族には見た目が書いてあり、特性と食い違わない', () => {
+  for (const world of WORLDS) {
+    for (const a of world.ancestries) {
+      assert.ok(a.look, `${world.id}/${a.name}: 見た目が書いていない`);
+      assert.ok(a.look.length > 20, `${world.id}/${a.name}: 見た目が短すぎる`);
+    }
+  }
+
+  useWorld('embers');
+  const byId = id => worldById('embers').ancestries.find(a => a.id === id);
+
+  // 竜鱗を持つなら、鱗は見えている。
+  const dragon = byId('dragonborn');
+  assert.ok(dragon.traits.some(t => t.id === 'dragonScales'));
+  assert.ok(dragon.look.includes('鱗'), '竜鱗を持つのに見た目に鱗がない');
+
+  // 暗がりで見える目は、灯りを向ければ光る。灯りが境界のこの地方では効く。
+  const tiefling = byId('tiefling');
+  assert.ok(tiefling.traits.some(t => t.id === 'darkvision'));
+  assert.ok(tiefling.look.includes('光る'), '闇の知恵を持つのに目のことが書かれていない');
+
+  // 「人」の線引きが決まりごと側にもあること。
+  const truth = LORE.truths.find(t => t.title.includes('「人」'));
+  assert.ok(truth, '「人」の線引きが読み物に無い');
+  for (const who of ['竜血', '魔筋']) {
+    assert.ok(truth.text.includes(who), `線引きに「${who}」が出てこない`);
+  }
+});
+
 /* 「竜ってメジャーな存在？」から。「この地方に竜は出ない」と書いた以上、
    敵の一覧に竜がいてはいけない。恐ろしいものの語彙が不死で出来ていることも、
    数のうえで本当でなければ、読み物のほうが嘘になる。 */

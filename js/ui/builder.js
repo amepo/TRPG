@@ -228,6 +228,9 @@ function stepAncestry(draft, refresh) {
     el('div', { class: 'tile__desc', text: a.blurb }),
     el('div', { class: 'tiny faint', text: traitList(a).map(t => t.text).join('／') }),
     a.life ? el('div', { class: 'tiny faint', text: lifeLine(a.life) }) : null,
+    /* 見た目は選ぶときの判断材料になる——鱗があるかどうかで、村での扱いが変わる。
+       強調（**）は落として一行にする。ここは読み物ではなく選択肢なので。 */
+    a.look ? el('div', { class: 'tiny faint', text: `見た目：${a.look.replace(/\*\*/g, '')}` }) : null,
   ])));
 }
 
