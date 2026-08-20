@@ -9,6 +9,7 @@
    {
      id, title, art,
      text: string | string[]                     // narration, "{name}" is filled in
+     again: string | string[]                    // shorter text from the 2nd visit on
      onEnter: Effect[]                           // runs once per visit
      choices: Choice[]
      combat: { title, enemies: string[], surprise, onVictory, onDefeat, onFlee }
@@ -196,8 +197,12 @@ export function interpolate(text, ctx) {
 }
 
 /** Narration can be a string, an array of paragraphs, or a function. */
-export function nodeText(node, ctx) {
-  const raw = typeof node.text === 'function' ? node.text(ctx) : node.text;
+export function nodeText(node, ctx, { firstVisit = true } = {}) {
+  /* 二度目に読む文。拠点のように何度も戻る場面では、毎回同じ地の文を
+     読み直すことになる——スマホだとスクロールだけで手が疲れる。
+     `again` があれば二度目からそちらを出す。書いていなければ従来どおり。 */
+  const source = !firstVisit && node.again !== undefined ? node.again : node.text;
+  const raw = typeof source === 'function' ? source(ctx) : source;
   return [].concat(raw || []).map(p => interpolate(p, ctx));
 }
 
@@ -245,6 +250,20 @@ export function validate(scenario, { monsters = {} } = {}) {
     if (!target) return;
     if (!ids.has(target)) errors.push(`${where}: リンク先 "${target}" が存在しません`);
   };
+
+  /* 何度も戻ってくる長い場面。拠点のような作りだと、選択肢を一つ選ぶたびに
+     同じ地の文を読み直すことになる——スマホではスクロールだけで手が疲れる。
+     `again`（二度目からの本文）を書けば済むので、書いていなければ知らせる。 */
+  for (const [id, node] of Object.entries(nodes)) {
+    const length = [].concat(node.text || []).join('').length;
+    const returns = Object.values(nodes).reduce((count, other) => count
+      + (other.choices || []).filter(c =>
+        c.to === id || c.check?.success?.to === id || c.check?.fail?.to === id).length, 0);
+    if (returns >= 3 && length >= 120 && node.again === undefined) {
+      warnings.push(`「${node.title || id}」: ${returns}箇所から戻ってくる長い場面です。`
+        + '二度目からの本文を書くと、読み直しが減ります');
+    }
+  }
 
   /* 自作の敵。攻撃を持たない敵は、立っているだけで何もしない——
      戦闘が終わらないので、これは警告ではなく間違いとして出す。 */

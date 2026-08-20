@@ -128,7 +128,7 @@ export class Session extends EventTarget {
     this.turnCount += 1;
 
     if (node.title) this.say(node.title, 'scene', { art: node.art });
-    for (const paragraph of nodeText(node, this.ctx())) this.say(paragraph, 'narration');
+    for (const paragraph of nodeText(node, this.ctx(), { firstVisit })) this.say(paragraph, 'narration');
 
     if (node.onEnter && (firstVisit || node.repeatEffects)) applyEffects(node.onEnter, this.ctx());
     if (node.rest) this.rest(node.rest);

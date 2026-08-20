@@ -670,3 +670,61 @@ test('途中で保存しても、持ち帰ったものの差は狂わない', ()
   const restored = Session.load(JSON.parse(JSON.stringify(session.save())));
   assert.equal(restored.view().growth[0].xpGained, 300, '読み直したら増分が消えた');
 });
+
+/* -------------------------------------------------- 二度目からの本文 */
+
+/* 拠点のような場面は、選択肢を一つ選ぶたびに戻ってくる。そのたびに同じ
+   地の文を読み直すと、スマホではスクロールだけで手が疲れる——という報告から。
+   場面を複製して短い版を作らせるより、同じ場面に二つ目の文を持たせる。 */
+test('二度目からは、短いほうの本文が出る', () => {
+  useWorld('embers');
+  const scenario = normalize({
+    id: 'again-test', title: '戻る場面', start: 'hub',
+    nodes: {
+      hub: {
+        id: 'hub', title: '洞窟前', text: ['長い長い描写がここに入る。', '二段落ある。'],
+        again: ['洞窟の前に戻ってきた。'],
+        choices: [{ text: '覗く', to: 'peek' }, { text: '帰る', to: 'end' }],
+      },
+      peek: { id: 'peek', title: '穴', text: ['暗い。'], choices: [{ text: '戻る', to: 'hub' }] },
+      end: { id: 'end', title: '終', text: ['帰った。'], ending: { type: 'neutral', title: '終', text: '終わり。' } },
+    },
+  });
+
+  const session = new Session({ scenario, party: pregeneratedParty(), seed: 1 });
+  session.start();
+  const first = session.log.filter(l => l.kind === 'narration').map(l => l.text);
+  assert.ok(first.includes('長い長い描写がここに入る。'), '初回に長いほうが出ていない');
+
+  session.choose(0);                                    // 覗く
+  session.choose(0);                                    // 戻る → 二度目
+  const said = session.log.filter(l => l.kind === 'narration').map(l => l.text);
+  assert.ok(said.includes('洞窟の前に戻ってきた。'), '二度目に短いほうが出ていない');
+  assert.equal(said.filter(t => t === '長い長い描写がここに入る。').length, 1,
+    '二度目にも長いほうを読ませている');
+});
+
+test('二度目の本文を書いていなければ、これまで通り毎回同じ文が出る', () => {
+  useWorld('embers');
+  const scenario = normalize({
+    id: 'no-again', title: '素のまま', start: 'hub',
+    nodes: {
+      hub: { id: 'hub', title: '広場', text: ['いつもの広場。'], choices: [{ text: '一周', to: 'hub' }] },
+    },
+  });
+  const session = new Session({ scenario, party: pregeneratedParty(), seed: 1 });
+  session.start();
+  session.choose(0);
+  const said = session.log.filter(l => l.kind === 'narration').map(l => l.text);
+  assert.equal(said.filter(t => t === 'いつもの広場。').length, 2);
+});
+
+/* 収録シナリオが、自分で書いた点検に引っかからないこと。 */
+test('何度も戻る長い場面には、二度目の本文が書いてある', () => {
+  for (const scenario of BUILT_IN) {
+    inWorld(scenario);
+    const stale = validate(scenario, { monsters: MONSTERS })
+      .warnings.filter(w => w.includes('二度目'));
+    assert.deepEqual(stale, [], `${scenario.id}: ${stale.join('／')}`);
+  }
+});

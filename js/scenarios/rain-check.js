@@ -670,6 +670,7 @@ export const rainCheck = {
         '奥から二つ目の槽の前で、足が止まった。名札に「M. ヴァレン」とある。',
         '——胸が、ゆっくり動いている。',
       ],
+      again: ['第37階層。槽が並んでいる。奥から二つ目の胸が、まだ動いている。'],
       onEnter: [{ setFlag: 'knowsTruth' }, { setFlag: 'foundMikhail' }],
       choices: [
         {

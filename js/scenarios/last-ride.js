@@ -90,6 +90,7 @@ export const lastRide = {
         '**下層道路** — 遅い。カメラはない。ギャングの縄張りを通る。',
         '**旧地上線** — 廃線跡。車一台がやっと。誰も使わない理由がある。',
       ],
+      again: ['三つの道。高速はカメラ、下層はギャング、旧地上線は誰も使わない。'],
       choices: [
         { text: '高速道路へ乗る', effects: [{ var: 'pursuit', add: 1 }], to: 'highway' },
         { text: '下層道路へ降りる', to: 'undercity' },

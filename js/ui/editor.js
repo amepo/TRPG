@@ -23,7 +23,7 @@ import { WORLDS, useWorld, worldById, DEFAULT_WORLD } from '../worlds/index.js';
 export const EDITABLE = {
   scenario: ['id', 'title', 'author', 'world', 'blurb', 'level', 'length', 'start',
     'vars', 'nodes', 'items', 'monsters', 'tutorial'],
-  node: ['id', 'title', 'art', 'text', 'onEnter', 'repeatEffects', 'choices',
+  node: ['id', 'title', 'art', 'text', 'again', 'onEnter', 'repeatEffects', 'choices',
     'combat', 'netrun', 'ending'],
   choice: ['text', 'to', 'check', 'effects', 'once', 'if', 'requires', 'lockedText'],
   outcome: ['text', 'to', 'effects'],
@@ -864,6 +864,27 @@ export class EditorScreen {
         value: [].concat(node.text || []).join('\n'),
         oninput: e => { node.text = e.target.value.split('\n'); this.typed(); },
       })),
+
+      /* 二度目に読む文。拠点のように何度も戻る場面では、毎回同じ地の文を
+         読み直すことになる——スマホだとスクロールだけで手が疲れる。
+         場面を複製して短い版を作らせるより、同じ場面に二つ目の文を持たせる。 */
+      this.foldable(
+        '二度目からの本文',
+        [].concat(node.again || []).join(' ').slice(0, 40),
+        frag(
+          el('p', { class: 'tiny faint', text: '空なら毎回いつもの本文を出します。何度も戻ってくる場面には、短い一行を入れておくと読みやすくなります。' }),
+          el('textarea', {
+            class: 'textarea', style: { minHeight: '70px' },
+            value: [].concat(node.again || []).join('\n'),
+            placeholder: '洞窟の前に戻ってきた。',
+            oninput: e => {
+              const lines = e.target.value.split('\n').filter(Boolean);
+              node.again = lines.length ? lines : undefined;
+              this.typed();
+            },
+          }),
+        ),
+      ),
 
       /* id は自分で付けられる。node12_a3f のままだと、行き先の一覧で
          同じ見出しが並んだときに見分けがつかない。 */

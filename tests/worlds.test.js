@@ -569,6 +569,19 @@ test('ネオンでは全員が登録された姓を持つ', () => {
   assert.ok(names.every(n => n.includes('・')), '姓を持たない者がいる');
 });
 
+/* 「種族比ってどんなもんかな？」から。村を描くときに「何人に一人か」で
+   考えられるよう、数として決めた。 */
+test('種族には人口比が書いてあり、決まりごとと食い違わない', () => {
+  useWorld('embers');
+  for (const a of worldById('embers').ancestries) {
+    assert.ok(a.share, `${a.name}: 人口比が書いていない`);
+  }
+  const truth = LORE.truths.find(t => t.title.includes('七人'));
+  assert.ok(truth, '人口比の決まりごとが読み物に無い');
+  // 数えられない側がいる、というのが要点。魔筋は名簿の上では人間。
+  assert.ok(truth.text.includes('数えられていない'), '数えられない側のことが書かれていない');
+});
+
 /* 「竜血と魔筋の見た目は人間と同じ？」から。特性として実装したものは、
    見た目のほうにも出ていなければ嘘になる——竜鱗があるなら鱗は見えるし、
    暗がりで見える目は、灯りを向けたときに光る。 */

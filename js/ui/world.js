@@ -108,7 +108,7 @@ const ancestriesCard = () => (ANCESTRIES.length ? el('div', { class: 'card stack
   ...ANCESTRIES.map(a => el('div', { class: 'stack', style: { gap: '2px', marginBottom: '12px' } }, [
     el('div', { class: 'spread' }, [
       el('span', { style: { fontWeight: '600' }, text: a.name }),
-      a.life ? el('span', { class: 'tiny faint', text: lifeText(a.life) }) : null,
+      el('span', { class: 'tiny faint', text: [a.share, a.life ? lifeText(a.life) : null].filter(Boolean).join('／') }),
     ]),
     body(a.blurb || ''),
     a.look ? body(`見た目：${a.look}`, 'tiny muted') : null,
