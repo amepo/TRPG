@@ -99,20 +99,24 @@ export function effectsEditor(list, ctx) {
   );
 }
 
-/* 効果ひとつぶんの入力欄。種類ごとに要るものだけを出す。 */
+/* 効果ひとつぶんの入力欄。種類ごとに要るものだけを出す。
+   文字と数値は「打つたびに保存、描き直しはしない」。ここで描き直すと
+   一文字ごとに入力欄から指が外れ、画面が上まで飛ぶ。 */
 function effectField(name, effect, ctx, change) {
+  const typed = () => (ctx.onTyped ? ctx.onTyped() : change());
   const text = (label, get, set, placeholder = '') => field(label, el('input', {
     class: 'input', value: get() ?? '', placeholder,
-    oninput: e => { set(e.target.value); change(); },
+    oninput: e => { set(e.target.value); typed(); },
   }));
   const number = (label, get, set) => field(label, el('input', {
     class: 'input', type: 'number', value: get() ?? 0,
-    oninput: e => { set(Number(e.target.value) || 0); change(); },
+    oninput: e => { set(Number(e.target.value) || 0); typed(); },
   }));
 
   switch (name) {
     case 'var':
-      return field('変数', pickOrType(ctx.vars, effect.var, v => { effect.var = v; change(); }, '変数名'));
+      return field('変数', pickOrType(ctx.vars, effect.var,
+        (v, o) => { effect.var = v; (o?.typing ? typed : change)(); }, '変数名'));
     case 'amount':
       return el('div', { class: 'row' }, [
         el('div', { class: 'grow' }, [field(
@@ -123,7 +127,7 @@ function effectField(name, effect, ctx, change) {
             oninput: e => {
               const value = Number(e.target.value) || 0;
               if (effect.set !== undefined) effect.set = value; else effect.add = value;
-              change();
+              typed();
             },
           }),
         )]),
@@ -147,7 +151,8 @@ function effectField(name, effect, ctx, change) {
       return number('増減（マイナスで支払い）', () => effect.gold, v => { effect.gold = v; });
     case 'item': {
       const key = effect.giveItem !== undefined ? 'giveItem' : 'takeItem';
-      return field('持ち物', pickOrType(ctx.items, effect[key], v => { effect[key] = v; change(); }, 'アイテムの id'));
+      return field('持ち物', pickOrType(ctx.items, effect[key],
+        (v, o) => { effect[key] = v; (o?.typing ? typed : change)(); }, 'アイテムの id'));
     }
     case 'count':
       return number('個数', () => effect.count ?? 1, v => { effect.count = Math.max(1, v); });
@@ -190,10 +195,12 @@ function effectField(name, effect, ctx, change) {
 
 /* 既にある名前から選ぶか、新しく打つか。変数もアイテムも、
    打ち間違えると黙って効かなくなるので、候補を出すほうが安全。 */
-function pickOrType(known, value, onPick, placeholder) {
+function pickOrType(known, value, onPick, placeholder, ctx) {
+  /* 打っている最中は書き込むだけで、描き直さない。候補を押したときだけ
+     描き直す（選ばれた札に印をつけるため）。 */
   const input = el('input', {
     class: 'input', value: value ?? '', placeholder,
-    oninput: e => onPick(e.target.value),
+    oninput: e => onPick(e.target.value, { typing: true }),
   });
   if (!known?.length) return input;
   return frag(
@@ -300,10 +307,12 @@ function conditionFields(part, kind, ctx, change) {
     case 'noFlag':
       return [field('印の名前', el('input', {
         class: 'input', value: part[kind.id] ?? '', placeholder: 'sawTracks など',
-        oninput: e => { part[kind.id] = e.target.value; change(); },
+        // 打っている最中は保存だけ。part は条件そのものなので、書き換えは即座に届く。
+        oninput: e => { part[kind.id] = e.target.value; (ctx.onTyped || change)(); },
       }))];
     case 'has':
-      return [field('持ち物', pickOrType(ctx.items, part.has, v => { part.has = v; change(); }, 'アイテムの id'))];
+      return [field('持ち物', pickOrType(ctx.items, part.has,
+        (v, o) => { part.has = v; (o?.typing ? (ctx.onTyped || change) : change)(); }, 'アイテムの id'))];
     /* 印を立てなくても「あそこを見たか」で分岐できる。印より先に思いつく形。 */
     case 'visited':
       return [field('通った場面', el('select', {
@@ -318,7 +327,8 @@ function conditionFields(part, kind, ctx, change) {
     case 'var': {
       const op = part.lte !== undefined ? 'lte' : part.eq !== undefined ? 'eq' : 'gte';
       return [
-        field('変数', pickOrType(ctx.vars, part.var, v => { part.var = v; change(); }, '変数名')),
+        field('変数', pickOrType(ctx.vars, part.var,
+          (v, o) => { part.var = v; (o?.typing ? (ctx.onTyped || change) : change)(); }, '変数名')),
         el('div', { class: 'row' }, [
           el('div', { style: { width: '130px' } }, [field('くらべ方', el('select', {
             class: 'select',
@@ -335,7 +345,7 @@ function conditionFields(part, kind, ctx, change) {
           ]))]),
           el('div', { class: 'grow' }, [field('値', el('input', {
             class: 'input', type: 'number', value: part[op] ?? 1,
-            oninput: e => { part[op] = Number(e.target.value) || 0; change(); },
+            oninput: e => { part[op] = Number(e.target.value) || 0; (ctx.onTyped || change)(); },
           }))]),
         ]),
       ];

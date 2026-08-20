@@ -64,7 +64,11 @@ export class EditorScreen {
     return {
       vars, items, nodes,
       onMark: () => this.mark(),
+      /* 形が変わったとき（効果を足した・種類を変えた）だけ描き直す。 */
       onChange: () => { this.save(); this.render(); },
+      /* 打っている最中は保存だけ。描き直すと入力欄から指が外れ、
+         画面がいちばん上まで戻る——長い場面を書いている人には致命的だった。 */
+      onTyped: () => this.typed(),
     };
   }
 
@@ -123,7 +127,22 @@ export class EditorScreen {
   render() {
     if (!this.scenario) return this.renderPicker();
     this.save({ now: true });          // 画面が変わる節目で確実に書き出す
-    return this.renderEditor();
+
+    /* 描き直しても、読んでいた場所と開いていた欄はそのまま残す。
+       効果をひとつ足すたびに画面がいちばん上へ飛ぶと、20場面ぶん書いている
+       人は毎回スクロールし直すことになる。 */
+    const scroll = window.scrollY;
+    const opened = [...this.root.querySelectorAll('.fold[open] > summary')]
+      .map(s => s.textContent);
+
+    const result = this.renderEditor();
+
+    for (const fold of this.root.querySelectorAll('.fold')) {
+      const summary = fold.querySelector(':scope > summary');
+      if (summary && opened.includes(summary.textContent)) fold.open = true;
+    }
+    window.scrollTo({ top: scroll });
+    return result;
   }
 
   /* --------------------------------------------------------------- list */

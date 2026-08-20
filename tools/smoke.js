@@ -908,6 +908,46 @@ try {
     await page.locator('#sheetClose').click();
   });
 
+  /* 報告されたバグ：「ログに一行」の本文を打とうとすると、一文字ごとに
+     画面がいちばん上へ戻る。打鍵のたびに全体を描き直していた。 */
+  await step('工房：効果の本文を打っても、画面が飛ばず指も外れない', async () => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await click('シナリオ工房');
+    await click('新しく作る');
+    await page.locator('dialog[open] .tile').first().click();
+    await page.waitForSelector('.issue--ok');
+
+    // 場面を増やして、画面を下までスクロールできる状態にする。
+    for (let i = 0; i < 3; i++) { await click('＋ 場面を足す'); await page.waitForTimeout(120); }
+    await page.locator('.node-row').first().click();
+    await page.waitForTimeout(200);
+
+    // 「この場面に入ったとき」に『ログに一行』を足す。
+    const fold = page.locator('.fold').filter({ hasText: 'この場面に入ったとき' }).first();
+    if (!(await fold.getAttribute('open'))) await fold.locator('summary').click();
+    await page.locator('.fold[open] .select--add-effect').first().selectOption('log');
+    await page.waitForTimeout(250);
+
+    const body = page.locator('.fold[open] input.input').first();
+    await body.scrollIntoViewIfNeeded();
+    await body.click();
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+
+    // 一文字ずつ打つ。実際のキー入力で確かめないと、この不具合は出ない。
+    await body.pressSequentially('鐘が鳴らない', { delay: 40 });
+    await page.waitForTimeout(200);
+
+    const scrollAfter = await page.evaluate(() => window.scrollY);
+    if (Math.abs(scrollAfter - scrollBefore) > 80) {
+      throw new Error(`打っている途中で画面が飛んだ（${scrollBefore} → ${scrollAfter}）`);
+    }
+    // 入力欄から指が外れていないこと。外れると2文字目以降が消える。
+    const value = await body.inputValue();
+    if (value !== '鐘が鳴らない') throw new Error(`打った文字が落ちている: 「${value}」`);
+    const focused = await page.evaluate(() => document.activeElement?.value);
+    if (focused !== '鐘が鳴らない') throw new Error('入力欄から指が外れている');
+  });
+
   await step('コンソールエラーが出ていない', async () => {
     if (consoleErrors.length) throw new Error(consoleErrors.slice(0, 3).join(' / '));
   });
