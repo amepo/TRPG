@@ -125,6 +125,10 @@ try {
     }
     const text = await page.locator('.log').innerText();
     if (!/命中|外れ|ダメージ/.test(text)) throw new Error('戦闘ログが出ていない');
+    // 敵の一言は、戦闘が始まったところに出ている。
+    if (!await page.locator('.line-combat-enemy-blurb').count()) {
+      throw new Error('敵の一言が出ていない');
+    }
   });
 
   await step('キャラクターシートが開く', async () => {

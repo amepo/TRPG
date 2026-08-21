@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { Combat, spawnMonster, spawnGroup, conditionName } from '../js/core/combat.js';
 import { Rng } from '../js/core/rng.js';
 import { createCharacter, pregeneratedParty } from '../js/core/character.js';
-import { encounterDifficulty, MONSTERS } from '../js/core/content.js';
+import { encounterDifficulty, MONSTERS, monsterById } from '../js/core/content.js';
+import { useWorld } from '../js/worlds/index.js';
 
 const hero = (over = {}) => createCharacter({
   name: '勇者', classId: 'fighter', ancestryId: 'human', backgroundId: 'soldier',
@@ -192,4 +193,53 @@ test('encounter difficulty scales with the roster', () => {
 test('condition names are localised', () => {
   assert.equal(conditionName('poisoned'), '毒');
   assert.equal(conditionName('unknown-thing'), 'unknown-thing');
+});
+
+/* --------------------------------------------------- 敵の一言 */
+
+/* 「敵モブの『登場した時の一言』が機能していないように見えました」という報告。
+   世界の敵31体すべてに blurb が書いてあったのに、戦闘中どこにも出ていなかった。
+   工房で「登場したときの一言」と名前をつけて書かせておいて、登場しても
+   何も起きない——書いてあるのに効かない、そのもの。 */
+test('戦闘が始まると、敵の一言が出る', () => {
+  useWorld('embers');
+  const party = [hero()];
+  const enemies = [spawnMonster('goblin', { rng: new Rng(1) })];
+  const combat = new Combat(party, enemies, { rng: new Rng(1) });
+  combat.start();
+
+  const said = combat.log.filter(l => l.kind === 'enemy-blurb').map(l => l.text);
+  assert.equal(said.length, 1, '一言が出ていない');
+  assert.equal(said[0], monsterById('goblin').blurb);
+});
+
+test('同じ敵が並んでも、一言は一度だけ', () => {
+  useWorld('embers');
+  const enemies = spawnGroup(['direRat', 'direRat', 'direRat'], new Rng(2));
+  const combat = new Combat([hero()], enemies, { rng: new Rng(2) });
+  combat.start();
+
+  const said = combat.log.filter(l => l.kind === 'enemy-blurb');
+  assert.equal(said.length, 1, `3体で ${said.length} 回出ている`);
+});
+
+test('種類の違う敵が混ざれば、それぞれの一言が出る', () => {
+  useWorld('embers');
+  const enemies = spawnGroup(['goblin', 'goblin', 'wolf'], new Rng(3));
+  const combat = new Combat([hero()], enemies, { rng: new Rng(3) });
+  combat.start();
+
+  const said = combat.log.filter(l => l.kind === 'enemy-blurb').map(l => l.text);
+  assert.equal(said.length, 2);
+  assert.ok(said.includes(monsterById('goblin').blurb));
+  assert.ok(said.includes(monsterById('wolf').blurb));
+});
+
+/* 一言は書いてあるもの。書いてなければ黙る。 */
+test('一言のない敵では、余計な行を出さない', () => {
+  useWorld('embers');
+  const mute = { id: 'mute', name: '無言', hpAvg: 5, acOverride: 10, cr: 0, xp: 10, attacks: [{ name: '殴る', bonus: 2, damage: '1d4' }] };
+  const combat = new Combat([hero()], [spawnMonster(mute, { rng: new Rng(4) })], { rng: new Rng(4) });
+  combat.start();
+  assert.equal(combat.log.filter(l => l.kind === 'enemy-blurb').length, 0);
 });

@@ -115,6 +115,19 @@ export class Combat {
       .map(e => e.c);
 
     this.say(`— ${this.title} 開始 —`, 'header');
+
+    /* 敵の一言。世界の敵にもシナリオの自作敵にも書いてあるのに、
+       戦闘中どこにも出ていなかった——「登場したときの一言」という名前で
+       書かせておいて、登場しても何も起きない状態だった。
+       同じ敵が3体並んでも一度だけ出す。三度読まされても意味は増えない。 */
+    const said = new Set();
+    for (const enemy of this.enemies) {
+      const key = enemy.id || enemy.name;
+      if (!enemy.blurb || said.has(key)) continue;
+      said.add(key);
+      this.say(enemy.blurb, 'enemy-blurb');
+    }
+
     this.say(`行動順: ${this.order.map(c => c.name).join(' → ')}`, 'muted');
 
     if (this.surprise === 'party') this.say('不意打ち成功！敵は最初のラウンド行動できない。', 'good');

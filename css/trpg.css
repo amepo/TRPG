@@ -473,3 +473,9 @@ a { color: var(--gold); }
 /* 場面の絞り込み欄。一覧の上にくっつけて置く。 */
 .input--find { font-size: 13px; min-height: 34px; }
 .input--node-id { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+
+/* 敵の一言。戦闘が始まったとき一度だけ出る、描写の行。 */
+.line-combat-enemy-blurb {
+  color: var(--ink-dim); font-size: 14px; font-style: italic;
+  border-left: 2px solid var(--blood); padding-left: 10px; line-height: 1.7;
+}
